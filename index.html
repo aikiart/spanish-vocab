@@ -34,7 +34,13 @@
             border-radius: 15px;
             font-size: 13px;
             font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .sync-status {
+            font-size: 13px;
+            color: #27ae60;
             margin-bottom: 15px;
+            font-weight: bold;
         }
         .list-selector-bar {
             background-color: #eef2f7;
@@ -181,6 +187,7 @@
 <div class="quiz-container">
     <h1>Vocabulary Quiz</h1>
     <div id="user-display" class="user-tag">Workspace: Default</div>
+    <div id="sync-msg" class="sync-status">Connecting to Cloud...</div>
 
     <!-- Active List Selector -->
     <div class="list-selector-bar">
@@ -198,7 +205,7 @@
                 <input type="text" id="new-list-name" placeholder="e.g. Program A: -ment words" style="width: 95%; margin-top: 4px;">
             </div>
             <div>
-                <label style="font-size: 13px; font-weight: bold; color: #333;">Upload File (.txt / .csv):</label><br>
+                <label style="font-size: 13px; font-weight: bold; color: #333;">Upload Local File (.txt / .csv):</label><br>
                 <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px;">
             </div>
             <p style="margin: 0; font-size: 12px; color: #666;">Or paste word pairs below (one per line, e.g. <code>palabra, word</code>):</p>
@@ -260,7 +267,7 @@
         <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress for This List</button>
     </div>
 
-    <!-- Backup & Sync -->
+    <!-- Backup Controls -->
     <div class="backup-bar">
         <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup Workspace (JSON)</button>
         <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore Workspace (JSON)</button>
@@ -268,85 +275,129 @@
     </div>
 </div>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
 <script>
-    // --- DETERMINE USER WORKSPACE FROM URL PARAMETER ---
+    // --- REPLACE VALUES BELOW WITH YOUR KEYS FROM FIREBASE ---
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const urlParams = new URLSearchParams(window.location.search);
     const currentUser = urlParams.get('user') ? urlParams.get('user').toLowerCase().trim() : 'default';
-    
     document.getElementById('user-display').innerText = `Workspace: ${currentUser.toUpperCase()}`;
-    const DB_STORAGE_KEY = `vocab_db_${currentUser}`;
-    const ACTIVE_KEY_STORAGE = `vocab_active_${currentUser}`;
 
-    const defaultList = {
-        name: "Default: Essentials",
-        vocabulary: [
-            { es: "suministro", en: "supply" },
-            { es: "dominar", en: "master" },
-            { es: "a medida", en: "as you" },
-            { es: "letra", en: "lyrics" },
-            { es: "acuerdos", en: "agreements" },
-            { es: "impulsar", en: "boost" },
-            { es: "aprendas", en: "learn" },
-            { es: "fuentes", en: "sources" },
-            { es: "impulsado", en: "driven" },
-            { es: "aprovechar", en: "take advantage of" },
-            { es: "logran acceder", en: "manage to access" },
-            { es: "competitivos", en: "competitive" },
-            { es: "evolucionado", en: "evolved" },
-            { es: "inversiones", en: "investments" },
-            { es: "profundamente", en: "deeply" },
-            { es: "desempeñando", en: "playing" },
-            { es: "frente", en: "against" },
-            { es: "desempleo", en: "unemployment" },
-            { es: "verse", en: "be affected" },
-            { es: "impulsados", en: "driven" },
-            { es: "integró", en: "integrated" },
-            { es: "pulgar", en: "thumb" },
-            { es: "bajo", en: "bass" },
-            { es: "aumento", en: "increase" },
-            { es: "así como", en: "as well as" }
-        ],
-        mastered: [],
-        score: 0,
-        total: 0,
-        direction: "es-en",
-        format: "write",
-        includeMastered: false
-    };
+    const repoCsvFiles = [
+        { name: "Ending in -ment", file: "ending in ment.csv" },
+        { name: "Ending in -ly", file: "ending in ly.csv" },
+        { name: "Ending in -ed", file: "ending in ed.csv" }
+    ];
 
     let allLists = {};
     let activeListName = "";
     let currentQuestion = {};
     let answered = false;
 
-    function saveDatabaseToStorage() {
+    async function initApp() {
+        document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         try {
-            localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(allLists));
-            localStorage.setItem(ACTIVE_KEY_STORAGE, activeListName);
-        } catch (e) {
-            console.warn("Storage warning:", e);
+            const docRef = db.collection("workspaces").doc(currentUser);
+            const docSnap = await docRef.get();
+
+            if (docSnap.exists) {
+                const data = docSnap.data();
+                allLists = data.allLists || {};
+                activeListName = data.activeListName || Object.keys(allLists)[0];
+                document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+                renderListDropdown();
+                loadActiveListState();
+                nextQuestion();
+            } else {
+                document.getElementById("sync-msg").innerText = "Loading repo lists...";
+                await fetchAllRepoCsvFiles();
+            }
+        } catch (err) {
+            console.warn("Cloud connection error:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
+            fallbackLocalStorage();
         }
     }
 
-    function loadDatabaseFromStorage() {
-        try {
-            const rawDB = localStorage.getItem(DB_STORAGE_KEY);
-            const rawActive = localStorage.getItem(ACTIVE_KEY_STORAGE);
-
-            if (rawDB) {
-                allLists = JSON.parse(rawDB);
-            } else {
-                allLists = { [defaultList.name]: defaultList };
+    async function fetchAllRepoCsvFiles() {
+        allLists = {};
+        for (const item of repoCsvFiles) {
+            try {
+                const response = await fetch(encodeURI(item.file));
+                if (response.ok) {
+                    const csvText = await response.text();
+                    const parsed = parseDelimitedText(csvText);
+                    if (parsed.length > 0) {
+                        allLists[item.name] = {
+                            name: item.name,
+                            vocabulary: parsed,
+                            mastered: [],
+                            score: 0,
+                            total: 0,
+                            direction: "es-en",
+                            format: "write",
+                            includeMastered: false
+                        };
+                    }
+                }
+            } catch (err) {
+                console.warn(`Could not fetch ${item.file}:`, err);
             }
-
-            activeListName = (rawActive && allLists[rawActive]) ? rawActive : Object.keys(allLists)[0];
-        } catch (e) {
-            allLists = { [defaultList.name]: defaultList };
-            activeListName = defaultList.name;
         }
 
+        if (Object.keys(allLists).length === 0) {
+            allLists["Default List"] = {
+                name: "Default List",
+                vocabulary: [{ es: "dominar", en: "master" }],
+                mastered: [], score: 0, total: 0, direction: "es-en", format: "write"
+            };
+        }
+
+        activeListName = Object.keys(allLists)[0];
+        saveDatabaseToCloud();
         renderListDropdown();
         loadActiveListState();
+        nextQuestion();
+    }
+
+    async function saveDatabaseToCloud() {
+        try {
+            document.getElementById("sync-msg").innerText = "☁️ Saving...";
+            await db.collection("workspaces").doc(currentUser).set({
+                allLists: allLists,
+                activeListName: activeListName,
+                lastUpdated: new Date()
+            });
+            document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+        } catch (err) {
+            console.error("Cloud save failed:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
+        }
+    }
+
+    function fallbackLocalStorage() {
+        const rawDB = localStorage.getItem(`vocab_db_${currentUser}`);
+        if (rawDB) {
+            allLists = JSON.parse(rawDB);
+            activeListName = Object.keys(allLists)[0];
+            renderListDropdown();
+            loadActiveListState();
+            nextQuestion();
+        }
     }
 
     function renderListDropdown() {
@@ -365,12 +416,13 @@
         saveCurrentState();
         activeListName = name;
         loadActiveListState();
-        saveDatabaseToStorage();
+        saveDatabaseToCloud();
         nextQuestion();
     }
 
     function loadActiveListState() {
         const listData = allLists[activeListName];
+        if (!listData) return;
         document.getElementById("direction").value = listData.direction || "es-en";
         document.getElementById("format").value = listData.format || "write";
         document.getElementById("include-mastered").checked = !!listData.includeMastered;
@@ -383,7 +435,7 @@
         listData.direction = document.getElementById("direction").value;
         listData.format = document.getElementById("format").value;
         listData.includeMastered = document.getElementById("include-mastered").checked;
-        saveDatabaseToStorage();
+        saveDatabaseToCloud();
     }
 
     function createNewList() {
@@ -422,7 +474,7 @@
 
         renderListDropdown();
         loadActiveListState();
-        saveDatabaseToStorage();
+        saveDatabaseToCloud();
         nextQuestion();
     }
 
@@ -453,7 +505,7 @@
             activeListName = Object.keys(allLists)[0];
             renderListDropdown();
             loadActiveListState();
-            saveDatabaseToStorage();
+            saveDatabaseToCloud();
             nextQuestion();
         }
     }
@@ -463,7 +515,7 @@
         listData.mastered = [];
         listData.score = 0;
         listData.total = 0;
-        saveDatabaseToStorage();
+        saveDatabaseToCloud();
         updateScoreBoard();
         nextQuestion();
     }
@@ -492,9 +544,9 @@
                     activeListName = Object.keys(allLists)[0];
                     renderListDropdown();
                     loadActiveListState();
-                    saveDatabaseToStorage();
+                    saveDatabaseToCloud();
                     nextQuestion();
-                    alert("Workspace restored successfully!");
+                    alert("Workspace restored to cloud successfully!");
                 }
             } catch (err) {
                 alert("Invalid JSON file format.");
@@ -677,13 +729,12 @@
             }
         }
 
-        saveDatabaseToStorage();
+        saveDatabaseToCloud();
         updateScoreBoard();
         document.getElementById("next-btn").style.display = "block";
     }
 
-    loadDatabaseFromStorage();
-    nextQuestion();
+    initApp();
 </script>
 
 </body>
