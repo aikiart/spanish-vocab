@@ -84,13 +84,31 @@
             cursor: pointer;
         }
         .score-board { font-weight: bold; color: #555; margin-bottom: 15px; }
+        .prompt-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            min-height: 40px;
+        }
         .prompt {
             font-size: 26px;
             font-weight: bold;
             color: #2c3e50;
-            margin: 20px 0;
-            min-height: 35px;
+            margin: 0;
         }
+        .audio-btn {
+            background-color: #e1f5fe;
+            color: #0288d1;
+            border: 1px solid #b3e5fc;
+            padding: 4px 8px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .audio-btn:hover { background-color: #b3e5fc; }
         .options-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -244,7 +262,10 @@
 
     <!-- Active Game View -->
     <div id="game-view">
-        <div class="prompt" id="prompt">Word</div>
+        <div class="prompt-wrapper">
+            <div class="prompt" id="prompt">Word</div>
+            <button type="button" class="audio-btn" onclick="replayAudio()" title="Listen to pronunciation">🔊</button>
+        </div>
 
         <!-- Multiple Choice Options -->
         <div class="options-grid" id="options" style="display: none;"></div>
@@ -280,14 +301,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // --- REPLACE VALUES BELOW WITH YOUR KEYS FROM FIREBASE ---
+    // --- REPLACE LINES 233-238 WITH YOUR ACTUAL KEYS FROM FIREBASE ---
     const firebaseConfig = {
-  apiKey: "AIzaSyBiTFK0yyBvbNBg3j8rgDOSYkC4vsGZXl8",
-  authDomain: "spanish-vocab-91e21.firebaseapp.com",
-  projectId: "spanish-vocab-91e21",
-  storageBucket: "spanish-vocab-91e21.firebasestorage.app",
-  messagingSenderId: "734726387745",
-  appId: "1:734726387745:web:3eeb87410d77cb24350b60"
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -297,6 +318,7 @@
     const currentUser = urlParams.get('user') ? urlParams.get('user').toLowerCase().trim() : 'default';
     document.getElementById('user-display').innerText = `Workspace: ${currentUser.toUpperCase()}`;
 
+    // Standard repository CSV files
     const repoCsvFiles = [
         { name: "Ending in -ment", file: "ending in ment.csv" },
         { name: "Ending in -ly", file: "ending in ly.csv" },
@@ -307,6 +329,23 @@
     let activeListName = "";
     let currentQuestion = {};
     let answered = false;
+
+    // --- BILINGUAL TEXT-TO-SPEECH AUDIO ENGINE ---
+    function speakWord(text, isEsToEn) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stop any previous ongoing audio
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = isEsToEn ? 'es-ES' : 'en-US';
+            utterance.rate = 0.9; // Slightly slower speed for educational clarity
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function replayAudio() {
+        if (currentQuestion && currentQuestion.prompt) {
+            speakWord(currentQuestion.prompt, currentQuestion.isEsToEn);
+        }
+    }
 
     async function initApp() {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
@@ -647,6 +686,9 @@
         };
 
         document.getElementById("prompt").innerText = promptText;
+
+        // Trigger automatic bilingual pronunciation
+        speakWord(promptText, isEsToEn);
 
         if (format === "mc") {
             document.getElementById("options").style.display = "grid";
