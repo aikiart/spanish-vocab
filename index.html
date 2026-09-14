@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-List Vocabulary Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 580px;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        .list-selector-bar {
+            background-color: #eef2f7;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .list-selector-bar select {
+            font-weight: bold;
+            font-size: 15px;
+            color: #2c3e50;
+            padding: 6px 10px;
+            flex-grow: 1;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        select, input[type="text"] {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .toggle-container {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .score-board {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        .prompt {
+            font-size: 26px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+            min-height: 35px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn.correct { background-color: #2ecc71 !important; }
+        .btn.wrong { background-color: #e74c3c !important; }
+        
+        .write-input-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .text-input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 2px solid #ccc;
+            width: 60%;
+            outline: none;
+        }
+        .text-input:focus { border-color: #3498db; }
+        
+        .feedback {
+            font-size: 16px;
+            font-weight: bold;
+            height: 24px;
+            margin-bottom: 15px;
+        }
+        .action-btn {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .action-btn:hover { background-color: #1a252f; }
+        
+        .upload-section {
+            border: 1px dashed #bbb;
+            background-color: #fafafa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .upload-section summary {
+            font-weight: bold;
+            cursor: pointer;
+            color: #2c3e50;
+            outline: none;
+        }
+        .upload-controls {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .upload-controls textarea {
+            width: 95%;
+            height: 90px;
+            padding: 8px;
+            font-size: 13px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            resize: vertical;
+        }
+        .backup-bar {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .backup-btn {
+            background-color: #7f8c8d;
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+        .backup-btn:hover { background-color: #626567; }
+        .danger-btn { background-color: #e74c3c; }
+        .danger-btn:hover { background-color: #c0392b; }
+        #next-btn { display: none; margin: 0 auto; }
+        .completion-box { display: none; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>Vocabulary Hub</h1>
+
+    <!-- Active List Selector -->
+    <div class="list-selector-bar">
+        <label for="active-list-select" style="font-weight: bold; color: #333;">Active List:</label>
+        <select id="active-list-select" onchange="switchList(this.value)"></select>
+        <button type="button" class="action-btn danger-btn" style="padding: 5px 10px; font-size: 12px;" onclick="deleteCurrentList()">Delete List</button>
+    </div>
+
+    <!-- Create/Add New Word List Form -->
+    <details class="upload-section" id="upload-details">
+        <summary>➕ Create / Add New Vocabulary List</summary>
+        <div class="upload-controls">
+            <div>
+                <label style="font-size: 13px; font-weight: bold; color: #333;">List Name:</label><br>
+                <input type="text" id="new-list-name" placeholder="e.g. Program A: -ment words" style="width: 95%; margin-top: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; font-weight: bold; color: #333;">Upload File (.txt / .csv):</label><br>
+                <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px;">
+            </div>
+            <p style="margin: 0; font-size: 12px; color: #666;">Or paste word pairs below (one per line, e.g. <code>palabra, word</code>):</p>
+            <textarea id="paste-input" placeholder="dominar, master&#10;profundamente, deeply&#10;aumento, increase"></textarea>
+            <button type="button" class="action-btn" style="align-self: flex-start; background-color: #27ae60;" onclick="createNewList()">Save New List</button>
+        </div>
+    </details>
+
+    <div class="controls">
+        <div>
+            <label for="direction">Direction: </label>
+            <select id="direction" onchange="saveCurrentState(); nextQuestion();">
+                <option value="es-en">Spanish ➔ English</option>
+                <option value="en-es">English ➔ Spanish</option>
+                <option value="mixed">Mixed (Both)</option>
+            </select>
+        </div>
+        <div>
+            <label for="format">Type: </label>
+            <select id="format" onchange="saveCurrentState(); nextQuestion();">
+                <option value="write">Write-In</option>
+                <option value="mc">Multiple Choice</option>
+            </select>
+        </div>
+    </div>
+
+    <label class="toggle-container">
+        <input type="checkbox" id="include-mastered" onchange="saveCurrentState(); nextQuestion();">
+        Include previously mastered words
+    </label>
+
+    <div class="score-board">
+        Mastered: <span id="mastered-count">0</span> / <span id="total-words">0</span> | 
+        Score: <span id="score">0</span> / <span id="total">0</span>
+    </div>
+
+    <!-- Active Game View -->
+    <div id="game-view">
+        <div class="prompt" id="prompt">Word</div>
+
+        <!-- Multiple Choice Options -->
+        <div class="options-grid" id="options" style="display: none;"></div>
+
+        <!-- Write-In Input Area -->
+        <div class="write-input-container" id="write-container">
+            <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
+            <button type="button" class="action-btn" id="submit-btn" onclick="checkTextAnswer()">Submit</button>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+
+        <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
+    </div>
+
+    <!-- Completion Screen -->
+    <div class="completion-box" id="completion-view">
+        <h2>🎉 All Words Mastered! 🎉</h2>
+        <p>You have completed every word in this list!</p>
+        <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress for This List</button>
+    </div>
+
+    <!-- Multi-List Database Backup & Sync -->
+    <div class="backup-bar">
+        <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup All Lists (JSON)</button>
+        <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore All Lists (JSON)</button>
+        <input type="file" id="import-db-input" accept=".json" style="display: none;" onchange="importDatabase(event)">
+    </div>
+</div>
+
+<script>
+    // --- DEFAULT INITIAL LIST ---
+    const defaultList = {
+        name: "Default: Spanish Essentials",
+        vocabulary: [
+            { es: "suministro", en: "supply" },
+            { es: "dominar", en: "master" },
+            { es: "a medida", en: "as you" },
+            { es: "letra", en: "lyrics" },
+            { es: "acuerdos", en: "agreements" },
+            { es: "impulsar", en: "boost" },
+            { es: "aprendas", en: "learn" },
+            { es: "fuentes", en: "sources" },
+            { es: "impulsado", en: "driven" },
+            { es: "aprovechar", en: "take advantage of" },
+            { es: "logran acceder", en: "manage to access" },
+            { es: "competitivos", en: "competitive" },
+            { es: "evolucionado", en: "evolved" },
+            { es: "inversiones", en: "investments" },
+            { es: "profundamente", en: "deeply" },
+            { es: "desempeñando", en: "playing" },
+            { es: "frente", en: "against" },
+            { es: "desempleo", en: "unemployment" },
+            { es: "verse", en: "be affected" },
+            { es: "impulsados", en: "driven" },
+            { es: "integró", en: "integrated" },
+            { es: "pulgar", en: "thumb" },
+            { es: "bajo", en: "bass" },
+            { es: "aumento", en: "increase" },
+            { es: "así como", en: "as well as" }
+        ],
+        mastered: [],
+        score: 0,
+        total: 0,
+        direction: "es-en",
+        format: "write",
+        includeMastered: false
+    };
+
+    let allLists = {};
+    let activeListName = "";
+    let currentQuestion = {};
+    let answered = false;
+
+    // --- DATABASE / LOCALSTORAGE MANAGEMENT ---
+    function saveDatabaseToStorage() {
+        try {
+            localStorage.setItem("vocab_multi_game_db", JSON.stringify(allLists));
+            localStorage.setItem("vocab_active_list_name", activeListName);
+        } catch (e) {
+            console.warn("Storage warning:", e);
+        }
+    }
+
+    function loadDatabaseFromStorage() {
+        try {
+            const rawDB = localStorage.getItem("vocab_multi_game_db");
+            const rawActive = localStorage.getItem("vocab_active_list_name");
+
+            if (rawDB) {
+                allLists = JSON.parse(rawDB);
+            } else {
+                allLists = { [defaultList.name]: defaultList };
+            }
+
+            activeListName = (rawActive && allLists[rawActive]) ? rawActive : Object.keys(allLists)[0];
+        } catch (e) {
+            allLists = { [defaultList.name]: defaultList };
+            activeListName = defaultList.name;
+        }
+
+        renderListDropdown();
+        loadActiveListState();
+    }
+
+    function renderListDropdown() {
+        const select = document.getElementById("active-list-select");
+        select.innerHTML = "";
+        Object.keys(allLists).forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            if (name === activeListName) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function switchList(name) {
+        saveCurrentState();
+        activeListName = name;
+        loadActiveListState();
+        saveDatabaseToStorage();
+        nextQuestion();
+    }
+
+    function loadActiveListState() {
+        const listData = allLists[activeListName];
+        document.getElementById("direction").value = listData.direction || "es-en";
+        document.getElementById("format").value = listData.format || "write";
+        document.getElementById("include-mastered").checked = !!listData.includeMastered;
+        updateScoreBoard();
+    }
+
+    function saveCurrentState() {
+        if (!activeListName || !allLists[activeListName]) return;
+        const listData = allLists[activeListName];
+        listData.direction = document.getElementById("direction").value;
+        listData.format = document.getElementById("format").value;
+        listData.includeMastered = document.getElementById("include-mastered").checked;
+        saveDatabaseToStorage();
+    }
+
+    // --- CREATE & DELETE LISTS ---
+    function createNewList() {
+        const nameInput = document.getElementById("new-list-name").value.trim();
+        const textInput = document.getElementById("paste-input").value;
+
+        if (!nameInput) {
+            alert("Please enter a name for your new list (e.g. Program A: -ment words).");
+            return;
+        }
+
+        const parsedVocab = parseDelimitedText(textInput);
+        if (parsedVocab.length === 0) {
+            alert("No valid word pairs were found. Make sure words are separated by commas, tabs, dashes, or colons.");
+            return;
+        }
+
+        saveCurrentState();
+
+        allLists[nameInput] = {
+            name: nameInput,
+            vocabulary: parsedVocab,
+            mastered: [],
+            score: 0,
+            total: 0,
+            direction: "es-en",
+            format: "write",
+            includeMastered: false
+        };
+
+        activeListName = nameInput;
+        document.getElementById("new-list-name").value = "";
+        document.getElementById("paste-input").value = "";
+        document.getElementById("file-input").value = "";
+        document.getElementById("upload-details").open = false;
+
+        renderListDropdown();
+        loadActiveListState();
+        saveDatabaseToStorage();
+        nextQuestion();
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("paste-input").value = e.target.result;
+            if (!document.getElementById("new-list-name").value) {
+                // Auto-fill list name based on file name
+                const fileName = file.name.replace(/\.[^/.]+$/, "");
+                document.getElementById("new-list-name").value = fileName;
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function deleteCurrentList() {
+        const keys = Object.keys(allLists);
+        if (keys.length <= 1) {
+            alert("You must keep at least one active list.");
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete the list "${activeListName}"?`)) {
+            delete allLists[activeListName];
+            activeListName = Object.keys(allLists)[0];
+            renderListDropdown();
+            loadActiveListState();
+            saveDatabaseToStorage();
+            nextQuestion();
+        }
+    }
+
+    function resetListProgress() {
+        const listData = allLists[activeListName];
+        listData.mastered = [];
+        listData.score = 0;
+        listData.total = 0;
+        saveDatabaseToStorage();
+        updateScoreBoard();
+        nextQuestion();
+    }
+
+    // --- BACKUP & RESTORE DATABASE ---
+    function exportDatabase() {
+        saveCurrentState();
+        const blob = new Blob([JSON.stringify(allLists, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `vocab_hub_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importDatabase(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedDB = JSON.parse(e.target.result);
+                if (typeof importedDB === "object" && Object.keys(importedDB).length > 0) {
+                    allLists = importedDB;
+                    activeListName = Object.keys(allLists)[0];
+                    renderListDropdown();
+                    loadActiveListState();
+                    saveDatabaseToStorage();
+                    nextQuestion();
+                    alert("All vocabulary lists and progress restored successfully!");
+                }
+            } catch (err) {
+                alert("Invalid JSON file format.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- GAME ENGINE ---
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            const activeTag = document.activeElement.tagName;
+            if (activeTag === "TEXTAREA" || (activeTag === "INPUT" && document.activeElement.type === "file")) return;
+
+            const format = document.getElementById("format").value;
+            const completionView = document.getElementById("completion-view");
+
+            if (completionView.style.display === "block") return;
+
+            if (format === "write") {
+                if (!answered) checkTextAnswer();
+                else nextQuestion();
+            } else if (format === "mc") {
+                if (answered) nextQuestion();
+            }
+        }
+    });
+
+    function parseDelimitedText(rawText) {
+        const lines = rawText.split(/\r?\n/);
+        const parsedVocab = [];
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            let parts = line.split(/\t|,|;| - | = |:/);
+            if (parts.length < 2) parts = line.split(/\s{2,}/);
+            if (parts.length >= 2) {
+                const es = parts[0].trim();
+                const en = parts[1].trim();
+                if (es && en) parsedVocab.push({ es, en });
+            }
+        }
+        return parsedVocab;
+    }
+
+    function updateScoreBoard() {
+        const listData = allLists[activeListName];
+        if (!listData) return;
+        document.getElementById("score").innerText = listData.score || 0;
+        document.getElementById("total").innerText = listData.total || 0;
+        document.getElementById("mastered-count").innerText = (listData.mastered || []).length;
+        document.getElementById("total-words").innerText = (listData.vocabulary || []).length;
+    }
+
+    function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
+    function sanitize(str) {
+        return str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function nextQuestion() {
+        answered = false;
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+
+        const listData = allLists[activeListName];
+        const includeMastered = document.getElementById("include-mastered").checked;
+        const masteredSet = new Set(listData.mastered || []);
+
+        let activePool = listData.vocabulary || [];
+        if (!includeMastered) {
+            activePool = activePool.filter(pair => !masteredSet.has(pair.es));
+        }
+
+        if (activePool.length === 0) {
+            document.getElementById("game-view").style.display = "none";
+            document.getElementById("completion-view").style.display = "block";
+            return;
+        } else {
+            document.getElementById("game-view").style.display = "block";
+            document.getElementById("completion-view").style.display = "none";
+        }
+
+        const direction = document.getElementById("direction").value;
+        const format = document.getElementById("format").value;
+
+        let isEsToEn = direction === "es-en";
+        if (direction === "mixed") isEsToEn = Math.random() < 0.5;
+
+        const targetPair = getRandomItem(activePool);
+        const promptText = isEsToEn ? targetPair.es : targetPair.en;
+        const correctAnswer = isEsToEn ? targetPair.en : targetPair.es;
+
+        currentQuestion = {
+            pair: targetPair,
+            prompt: promptText,
+            correct: correctAnswer,
+            isEsToEn: isEsToEn
+        };
+
+        document.getElementById("prompt").innerText = promptText;
+
+        if (format === "mc") {
+            document.getElementById("options").style.display = "grid";
+            document.getElementById("write-container").style.display = "none";
+            setupMultipleChoice(isEsToEn, correctAnswer, listData.vocabulary);
+        } else {
+            document.getElementById("options").style.display = "none";
+            document.getElementById("write-container").style.display = "flex";
+            const inputField = document.getElementById("user-input");
+            inputField.value = "";
+            inputField.disabled = false;
+            inputField.focus();
+            document.getElementById("submit-btn").style.display = "inline-block";
+        }
+    }
+
+    function setupMultipleChoice(isEsToEn, correctAnswer, fullList) {
+        let choices = [correctAnswer];
+        while (choices.length < Math.min(4, fullList.length)) {
+            const randomPair = getRandomItem(fullList);
+            const wrongAnswer = isEsToEn ? randomPair.en : randomPair.es;
+            if (!choices.includes(wrongAnswer)) choices.push(wrongAnswer);
+        }
+
+        choices = shuffle(choices);
+        const optionsContainer = document.getElementById("options");
+        optionsContainer.innerHTML = "";
+
+        choices.forEach(choice => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn";
+            btn.innerText = choice;
+            btn.onclick = () => checkChoiceAnswer(btn, choice);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkChoiceAnswer(selectedBtn, selectedChoice) {
+        if (answered) return;
+        processResult(selectedChoice === currentQuestion.correct, selectedBtn);
+    }
+
+    function checkTextAnswer() {
+        if (answered) return;
+        const userInput = document.getElementById("user-input").value;
+        const isCorrect = sanitize(userInput) === sanitize(currentQuestion.correct);
+        document.getElementById("user-input").disabled = true;
+        document.getElementById("submit-btn").style.display = "none";
+        processResult(isCorrect, null);
+    }
+
+    function processResult(isCorrect, selectedBtn) {
+        answered = true;
+        const listData = allLists[activeListName];
+        listData.total = (listData.total || 0) + 1;
+
+        const feedback = document.getElementById("feedback");
+
+        if (isCorrect) {
+            if (selectedBtn) selectedBtn.classList.add("correct");
+            feedback.innerText = "Correct!";
+            feedback.style.color = "#2ecc71";
+            listData.score = (listData.score || 0) + 1;
+            
+            if (!listData.mastered) listData.mastered = [];
+            if (!listData.mastered.includes(currentQuestion.pair.es)) {
+                listData.mastered.push(currentQuestion.pair.es);
+            }
+        } else {
+            if (selectedBtn) selectedBtn.classList.add("wrong");
+            feedback.innerText = `Wrong! Correct answer: "${currentQuestion.correct}"`;
+            feedback.style.color = "#e74c3c";
+            
+            if (selectedBtn) {
+                const buttons = document.querySelectorAll(".options-grid .btn");
+                buttons.forEach(btn => {
+                    if (btn.innerText === currentQuestion.correct) btn.classList.add("correct");
+                });
+            }
+        }
+
+        saveDatabaseToStorage();
+        updateScoreBoard();
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    // Initialize Hub
+    loadDatabaseFromStorage();
+    nextQuestion();
+</script>
+
+</body>
+</html>
