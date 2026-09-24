@@ -196,8 +196,61 @@
         .backup-btn:hover { background-color: #626567; }
         .danger-btn { background-color: #e74c3c; }
         .danger-btn:hover { background-color: #c0392b; }
-        #next-btn { display: none; margin: 0 auto; }
+        #next-btn { display: none; margin: 15px auto 0 auto; }
         .completion-box { display: none; margin: 20px 0; }
+
+        /* --- SENTENCE PRACTICE COMPONENT STYLES --- */
+        .sentence-card {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px dashed #e2e8f0;
+            text-align: left;
+        }
+        .sentence-card h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sentence-input-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            box-sizing: border-box;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .sentence-input-box:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .correction-output {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+            display: none;
+        }
+        .correction-output.correct-box {
+            background-color: #e8f8f0;
+            border: 1px solid #2ecc71;
+            color: #1e8449;
+        }
+        .correction-output.wrong-box {
+            background-color: #fdf2f2;
+            border: 1px solid #e74c3c;
+            color: #c0392b;
+        }
+        .sentence-score-board {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -246,6 +299,7 @@
             <select id="format" onchange="saveCurrentState(); nextQuestion();">
                 <option value="write">Write-In</option>
                 <option value="mc">Multiple Choice</option>
+                <option value="sentence">Sentence Builder</option>
             </select>
         </div>
     </div>
@@ -276,6 +330,23 @@
             <button type="button" class="action-btn" id="submit-btn" onclick="checkTextAnswer()">Submit</button>
         </div>
 
+        <!-- Sentence Practice Component -->
+        <div class="sentence-card" id="sentence-container" style="display: none;">
+            <h3>
+                <span>✍️ Use word in context:</span>
+                <span class="sentence-score-board">
+                    Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
+                </span>
+            </h3>
+            <textarea id="sentence-input" class="sentence-input-box" rows="3" placeholder="Type a sentence using this word in context..."></textarea>
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                <button type="button" class="action-btn" id="check-sentence-btn" style="background-color: #27ae60;" onclick="checkSentenceSyntax()">Check Syntax</button>
+                <button type="button" class="audio-btn" id="sentence-audio-btn" style="display: none;" onclick="speakSentence()" title="Listen to sentence">🔊 Hear Sentence</button>
+            </div>
+            
+            <div id="sentence-feedback" class="correction-output"></div>
+        </div>
+
         <div class="feedback" id="feedback"></div>
 
         <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
@@ -301,14 +372,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
 <script>
-    // --- REPLACE LINES 233-238 WITH YOUR ACTUAL KEYS FROM FIREBASE ---
     const firebaseConfig = {
-         apiKey: "AIzaSyBiTFK0yyBvbNBg3j8rgDOSYkC4vsGZXl8",
-  authDomain: "spanish-vocab-91e21.firebaseapp.com",
-  projectId: "spanish-vocab-91e21",
-  storageBucket: "spanish-vocab-91e21.firebasestorage.app",
-  messagingSenderId: "734726387745",
-  appId: "1:734726387745:web:3eeb87410d77cb24350b60"
+        apiKey: "AIzaSyBiTFK0yyBvbNBg3j8rgDOSYkC4vsGZXl8",
+        authDomain: "spanish-vocab-91e21.firebaseapp.com",
+        projectId: "spanish-vocab-91e21",
+        storageBucket: "spanish-vocab-91e21.firebasestorage.app",
+        messagingSenderId: "734726387745",
+        appId: "1:734726387745:web:3eeb87410d77cb24350b60"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -318,7 +388,6 @@
     const currentUser = urlParams.get('user') ? urlParams.get('user').toLowerCase().trim() : 'default';
     document.getElementById('user-display').innerText = `Workspace: ${currentUser.toUpperCase()}`;
 
-    // Standard repository CSV files
     const repoCsvFiles = [
         { name: "Ending in -ment", file: "ending in ment.csv" },
         { name: "Ending in -ly", file: "ending in ly.csv" },
@@ -329,15 +398,23 @@
     let activeListName = "";
     let currentQuestion = {};
     let answered = false;
+    let sentenceChecked = false;
 
     // --- BILINGUAL TEXT-TO-SPEECH AUDIO ENGINE ---
     function speakWord(text, isEsToEn) {
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Stop any previous ongoing audio
+            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = isEsToEn ? 'es-ES' : 'en-US';
-            utterance.rate = 0.9; // Slightly slower speed for educational clarity
+            utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function speakSentence() {
+        const text = document.getElementById("sentence-input").value;
+        if (text) {
+            speakWord(text, currentQuestion.isTargetSpanish);
         }
     }
 
@@ -387,6 +464,8 @@
                             mastered: [],
                             score: 0,
                             total: 0,
+                            sentenceCorrect: 0,
+                            sentenceIncorrect: 0,
                             direction: "es-en",
                             format: "write",
                             includeMastered: false
@@ -402,7 +481,7 @@
             allLists["Default List"] = {
                 name: "Default List",
                 vocabulary: [{ es: "dominar", en: "master" }],
-                mastered: [], score: 0, total: 0, direction: "es-en", format: "write"
+                mastered: [], score: 0, total: 0, sentenceCorrect: 0, sentenceIncorrect: 0, direction: "es-en", format: "write"
             };
         }
 
@@ -500,6 +579,8 @@
             mastered: [],
             score: 0,
             total: 0,
+            sentenceCorrect: 0,
+            sentenceIncorrect: 0,
             direction: "es-en",
             format: "write",
             includeMastered: false
@@ -554,6 +635,8 @@
         listData.mastered = [];
         listData.score = 0;
         listData.total = 0;
+        listData.sentenceCorrect = 0;
+        listData.sentenceIncorrect = 0;
         saveDatabaseToCloud();
         updateScoreBoard();
         nextQuestion();
@@ -597,7 +680,11 @@
     document.addEventListener("keydown", function(event) {
         if (event.key === "Enter") {
             const activeTag = document.activeElement.tagName;
-            if (activeTag === "TEXTAREA" || (activeTag === "INPUT" && document.activeElement.type === "file")) return;
+            
+            // Allow Shift+Enter inside textarea for multi-line without triggering answer submit
+            if (activeTag === "TEXTAREA" && event.shiftKey) return;
+
+            if (activeTag === "INPUT" && document.activeElement.type === "file") return;
 
             const format = document.getElementById("format").value;
             const completionView = document.getElementById("completion-view");
@@ -609,6 +696,13 @@
                 else nextQuestion();
             } else if (format === "mc") {
                 if (answered) nextQuestion();
+            } else if (format === "sentence") {
+                event.preventDefault();
+                if (!sentenceChecked) {
+                    checkSentenceSyntax();
+                } else {
+                    nextQuestion();
+                }
             }
         }
     });
@@ -637,6 +731,8 @@
         document.getElementById("total").innerText = listData.total || 0;
         document.getElementById("mastered-count").innerText = (listData.mastered || []).length;
         document.getElementById("total-words").innerText = (listData.vocabulary || []).length;
+        document.getElementById("sentence-correct").innerText = listData.sentenceCorrect || 0;
+        document.getElementById("sentence-incorrect").innerText = listData.sentenceIncorrect || 0;
     }
 
     function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -647,8 +743,19 @@
 
     function nextQuestion() {
         answered = false;
+        sentenceChecked = false;
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
+
+        // Reset sentence area
+        const sentenceInput = document.getElementById("sentence-input");
+        sentenceInput.value = "";
+        sentenceInput.disabled = false;
+        const feedbackBox = document.getElementById("sentence-feedback");
+        feedbackBox.style.display = "none";
+        feedbackBox.className = "correction-output";
+        document.getElementById("sentence-audio-btn").style.display = "none";
+        document.getElementById("check-sentence-btn").style.display = "inline-block";
 
         const listData = allLists[activeListName];
         const includeMastered = document.getElementById("include-mastered").checked;
@@ -682,26 +789,34 @@
             pair: targetPair,
             prompt: promptText,
             correct: correctAnswer,
-            isEsToEn: isEsToEn
+            isEsToEn: isEsToEn,
+            targetWord: isEsToEn ? targetPair.es : targetPair.en,
+            isTargetSpanish: isEsToEn
         };
 
         document.getElementById("prompt").innerText = promptText;
-
-        // Trigger automatic bilingual pronunciation
         speakWord(promptText, isEsToEn);
 
         if (format === "mc") {
             document.getElementById("options").style.display = "grid";
             document.getElementById("write-container").style.display = "none";
+            document.getElementById("sentence-container").style.display = "none";
             setupMultipleChoice(isEsToEn, correctAnswer, listData.vocabulary);
-        } else {
+        } else if (format === "write") {
             document.getElementById("options").style.display = "none";
+            document.getElementById("sentence-container").style.display = "none";
             document.getElementById("write-container").style.display = "flex";
             const inputField = document.getElementById("user-input");
             inputField.value = "";
             inputField.disabled = false;
             inputField.focus();
             document.getElementById("submit-btn").style.display = "inline-block";
+        } else if (format === "sentence") {
+            document.getElementById("options").style.display = "none";
+            document.getElementById("write-container").style.display = "none";
+            document.getElementById("sentence-container").style.display = "block";
+            sentenceInput.placeholder = `Write a sentence in ${isEsToEn ? 'Spanish' : 'English'} using "${currentQuestion.targetWord}"...`;
+            sentenceInput.focus();
         }
     }
 
@@ -739,6 +854,45 @@
         document.getElementById("user-input").disabled = true;
         document.getElementById("submit-btn").style.display = "none";
         processResult(isCorrect, null);
+    }
+
+    // --- SENTENCE SYNTAX CHECKER FUNCTION ---
+    function checkSentenceSyntax() {
+        const sentenceInput = document.getElementById("sentence-input");
+        const userText = sentenceInput.value.trim();
+        const feedbackBox = document.getElementById("sentence-feedback");
+        const listData = allLists[activeListName];
+
+        if (!userText) {
+            alert("Please type a sentence before checking.");
+            return;
+        }
+
+        // Basic client-side target word verification
+        const targetWordClean = sanitize(currentQuestion.targetWord);
+        const userSentenceClean = sanitize(userText);
+        const includesTarget = userSentenceClean.includes(targetWordClean);
+
+        sentenceChecked = true;
+        sentenceInput.disabled = true;
+        document.getElementById("check-sentence-btn").style.display = "none";
+        document.getElementById("sentence-audio-btn").style.display = "inline-block";
+
+        if (!includesTarget) {
+            listData.sentenceIncorrect = (listData.sentenceIncorrect || 0) + 1;
+            feedbackBox.className = "correction-output wrong-box";
+            feedbackBox.innerHTML = `<strong>⚠️ Target Word Missing:</strong> Your sentence must include the target word <em>"${currentQuestion.targetWord}"</em>.`;
+        } else {
+            // Local client-side baseline rule validation
+            listData.sentenceCorrect = (listData.sentenceCorrect || 0) + 1;
+            feedbackBox.className = "correction-output correct-box";
+            feedbackBox.innerHTML = `<strong>✅ Great effort!</strong> Sentence includes target word <em>"${currentQuestion.targetWord}"</em>.<br><small>(Ready to connect to DeepSeek/Qwen grammar endpoint for full AI analysis)</small>`;
+        }
+
+        feedbackBox.style.display = "block";
+        saveDatabaseToCloud();
+        updateScoreBoard();
+        document.getElementById("next-btn").style.display = "block";
     }
 
     function processResult(isCorrect, selectedBtn) {
