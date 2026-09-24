@@ -763,9 +763,7 @@
         if (event.key === "Enter") {
             const activeTag = document.activeElement.tagName;
             
-            // Allow Shift+Enter inside textarea for multi-line without triggering answer submit
             if (activeTag === "TEXTAREA" && event.shiftKey) return;
-
             if (activeTag === "INPUT" && document.activeElement.type === "file") return;
 
             const format = document.getElementById("format").value;
@@ -830,7 +828,6 @@
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
 
-        // Reset sentence area
         const sentenceInput = document.getElementById("sentence-input");
         sentenceInput.value = "";
         sentenceInput.disabled = false;
@@ -939,7 +936,7 @@
         processResult(isCorrect, null);
     }
 
-    // --- REAL-TIME GRAMMAR CHECKER & REVISION QUEUE MANAGEMENT ---
+    // --- REAL-TIME GRAMMAR CHECKER & IMMEDIATE QUEUE RENDER ---
     async function checkSentenceSyntax() {
         const sentenceInput = document.getElementById("sentence-input");
         const userText = sentenceInput.value.trim();
@@ -992,7 +989,6 @@
                     sentenceChecked = true;
                 }
                 
-                // If fixing an item from the revision log, remove it
                 if (activeRevisionIndex !== null) {
                     removeSentenceFromRevisionQueue(activeRevisionIndex);
                     activeRevisionIndex = null;
@@ -1054,7 +1050,6 @@
         const listData = allLists[activeListName];
         if (!listData.revisionQueue) listData.revisionQueue = [];
         
-        // Prevent duplicate entries
         const exists = listData.revisionQueue.some(item => item.text === text);
         if (!exists) {
             listData.revisionQueue.push({
@@ -1064,6 +1059,7 @@
                 issue: issueReason
             });
         }
+        renderRevisionQueue();
     }
 
     function removeSentenceFromRevisionQueue(index) {
