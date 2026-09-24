@@ -41,7 +41,7 @@
             border-radius: 16px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             width: 100%;
-            max-width: 640px;
+            max-width: 680px;
             text-align: center;
         }
 
@@ -79,7 +79,7 @@
             border: 1px solid var(--input-border);
             padding: 12px 16px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -285,6 +285,45 @@
             resize: vertical;
         }
 
+        /* --- LIST EDITOR COMPONENT STYLES --- */
+        .editor-table-container {
+            max-height: 260px;
+            overflow-y: auto;
+            margin-top: 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 8px;
+        }
+
+        .word-editor-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .word-editor-table th, .word-editor-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .word-editor-table th {
+            background-color: var(--input-bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .word-editor-table input[type="text"] {
+            width: 90%;
+            padding: 5px 8px;
+            font-size: 13px;
+        }
+
+        .sm-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
         .backup-bar {
             margin-top: 25px;
             padding-top: 20px;
@@ -466,8 +505,38 @@
     <div class="list-selector-bar">
         <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
         <select id="active-list-select" onchange="switchList(this.value)"></select>
-        <button type="button" class="action-btn danger-btn" style="padding: 6px 12px; font-size: 12px;" onclick="deleteCurrentList()">Delete List</button>
+        <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
     </div>
+
+    <!-- Edit Words in Active List Section -->
+    <details class="upload-section" id="editor-details">
+        <summary>✏️ Edit Active List (Words & Translations)</summary>
+        <div class="upload-controls">
+            <!-- Add Single Word Pair Row -->
+            <div style="display: flex; gap: 8px; margin-top: 5px;">
+                <input type="text" id="add-es" placeholder="Spanish Word" style="width: 40%;">
+                <input type="text" id="add-en" placeholder="English Translation" style="width: 40%;">
+                <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleWordPair()">+ Add</button>
+            </div>
+
+            <!-- List Editor Table Container -->
+            <div class="editor-table-container">
+                <table class="word-editor-table">
+                    <thead>
+                        <tr>
+                            <th>Spanish</th>
+                            <th>English</th>
+                            <th style="width: 60px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="editor-table-body">
+                        <!-- Dynamically Populated -->
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveListEdits()">Save Changes</button>
+        </div>
+    </details>
 
     <!-- Create/Add New Word List Form -->
     <details class="upload-section" id="upload-details">
@@ -758,6 +827,7 @@
         document.getElementById("include-mastered").checked = !!listData.includeMastered;
         updateScoreBoard();
         renderRevisionQueue();
+        renderEditorTable();
     }
 
     function saveCurrentState() {
@@ -767,6 +837,79 @@
         listData.format = document.getElementById("format").value;
         listData.includeMastered = document.getElementById("include-mastered").checked;
         saveDatabaseToCloud();
+    }
+
+    /* --- IN-BROWSER LIST EDITOR LOGIC --- */
+    function renderEditorTable() {
+        const tbody = document.getElementById("editor-table-body");
+        tbody.innerHTML = "";
+        const listData = allLists[activeListName];
+
+        if (!listData || !listData.vocabulary) return;
+
+        listData.vocabulary.forEach((pair, idx) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><input type="text" value="${pair.es}" id="edit-es-${idx}"></td>
+                <td><input type="text" value="${pair.en}" id="edit-en-${idx}"></td>
+                <td><button type="button" class="action-btn danger-btn sm-btn" onclick="deleteWordPair(${idx})">🗑️</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addSingleWordPair() {
+        const esInput = document.getElementById("add-es");
+        const enInput = document.getElementById("add-en");
+        const esVal = esInput.value.trim();
+        const enVal = enInput.value.trim();
+
+        if (!esVal || !enVal) {
+            alert("Please enter both Spanish and English terms.");
+            return;
+        }
+
+        const listData = allLists[activeListName];
+        if (!listData.vocabulary) listData.vocabulary = [];
+
+        listData.vocabulary.push({ es: esVal, en: enVal });
+        esInput.value = "";
+        enInput.value = "";
+
+        renderEditorTable();
+        saveDatabaseToCloud();
+        updateScoreBoard();
+    }
+
+    function deleteWordPair(index) {
+        const listData = allLists[activeListName];
+        if (listData && listData.vocabulary) {
+            listData.vocabulary.splice(index, 1);
+            renderEditorTable();
+            saveDatabaseToCloud();
+            updateScoreBoard();
+            nextQuestion();
+        }
+    }
+
+    function saveListEdits() {
+        const listData = allLists[activeListName];
+        if (!listData || !listData.vocabulary) return;
+
+        const updatedVocab = [];
+        listData.vocabulary.forEach((_, idx) => {
+            const esVal = document.getElementById(`edit-es-${idx}`).value.trim();
+            const enVal = document.getElementById(`edit-en-${idx}`).value.trim();
+            if (esVal && enVal) {
+                updatedVocab.push({ es: esVal, en: enVal });
+            }
+        });
+
+        listData.vocabulary = updatedVocab;
+        saveDatabaseToCloud();
+        updateScoreBoard();
+        alert("List updates saved successfully!");
+        nextQuestion();
     }
 
     function createNewList() {
