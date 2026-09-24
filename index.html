@@ -22,7 +22,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 580px;
+            max-width: 620px;
             text-align: center;
         }
         h1 { margin-top: 0; color: #333; font-size: 24px; }
@@ -199,7 +199,7 @@
         #next-btn { display: none; margin: 15px auto 0 auto; }
         .completion-box { display: none; margin: 20px 0; }
 
-        /* --- SENTENCE PRACTICE COMPONENT STYLES --- */
+        /* --- SENTENCE PRACTICE & REVISION QUEUE STYLES --- */
         .sentence-card {
             margin-top: 20px;
             padding-top: 15px;
@@ -270,6 +270,54 @@
             cursor: pointer;
             margin-top: 5px;
         }
+        
+        /* Revision Queue Section */
+        .revision-queue-card {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #fff9f5;
+            border: 1px solid #ffcca8;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .revision-queue-card h4 {
+            margin: 0 0 10px 0;
+            color: #d35400;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .revision-item {
+            background: #ffffff;
+            border: 1px solid #ffe0cc;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .revision-item-text {
+            font-size: 13px;
+            color: #333;
+            flex-grow: 1;
+        }
+        .revision-item-tag {
+            font-weight: bold;
+            color: #e67e22;
+        }
+        .retry-btn {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .retry-btn:hover { background-color: #d35400; }
     </style>
 </head>
 <body>
@@ -369,6 +417,14 @@
         <div class="feedback" id="feedback"></div>
 
         <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
+
+        <!-- Revision History Queue -->
+        <div class="revision-queue-card" id="revision-queue-container" style="display: none;">
+            <h4>
+                <span>📝 Sentences Needing Revision (<span id="revision-queue-count">0</span>)</span>
+            </h4>
+            <div id="revision-queue-list"></div>
+        </div>
     </div>
 
     <!-- Completion Screen -->
@@ -419,6 +475,7 @@
     let answered = false;
     let sentenceChecked = false;
     let latestSuggestedCorrection = "";
+    let activeRevisionIndex = null;
 
     // --- BILINGUAL TEXT-TO-SPEECH AUDIO ENGINE ---
     function speakWord(text, isEsToEn) {
@@ -486,6 +543,7 @@
                             total: 0,
                             sentenceCorrect: 0,
                             sentenceIncorrect: 0,
+                            revisionQueue: [],
                             direction: "es-en",
                             format: "write",
                             includeMastered: false
@@ -501,7 +559,7 @@
             allLists["Default List"] = {
                 name: "Default List",
                 vocabulary: [{ es: "dominar", en: "master" }],
-                mastered: [], score: 0, total: 0, sentenceCorrect: 0, sentenceIncorrect: 0, direction: "es-en", format: "write"
+                mastered: [], score: 0, total: 0, sentenceCorrect: 0, sentenceIncorrect: 0, revisionQueue: [], direction: "es-en", format: "write"
             };
         }
 
@@ -565,6 +623,7 @@
         document.getElementById("format").value = listData.format || "write";
         document.getElementById("include-mastered").checked = !!listData.includeMastered;
         updateScoreBoard();
+        renderRevisionQueue();
     }
 
     function saveCurrentState() {
@@ -601,6 +660,7 @@
             total: 0,
             sentenceCorrect: 0,
             sentenceIncorrect: 0,
+            revisionQueue: [],
             direction: "es-en",
             format: "write",
             includeMastered: false
@@ -657,8 +717,10 @@
         listData.total = 0;
         listData.sentenceCorrect = 0;
         listData.sentenceIncorrect = 0;
+        listData.revisionQueue = [];
         saveDatabaseToCloud();
         updateScoreBoard();
+        renderRevisionQueue();
         nextQuestion();
     }
 
@@ -718,7 +780,6 @@
                 if (answered) nextQuestion();
             } else if (format === "sentence") {
                 if (activeTag === "TEXTAREA" && !event.ctrlKey) {
-                    // Let user type normally inside textarea unless Ctrl+Enter is pressed
                     return;
                 }
                 event.preventDefault();
@@ -765,6 +826,7 @@
         answered = false;
         sentenceChecked = false;
         latestSuggestedCorrection = "";
+        activeRevisionIndex = null;
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
 
@@ -837,6 +899,8 @@
             sentenceInput.placeholder = `Write a sentence in ${isEsToEn ? 'Spanish' : 'English'} using "${currentQuestion.targetWord}"...`;
             sentenceInput.focus();
         }
+
+        renderRevisionQueue();
     }
 
     function setupMultipleChoice(isEsToEn, correctAnswer, fullList) {
@@ -875,7 +939,7 @@
         processResult(isCorrect, null);
     }
 
-    // --- REAL-TIME GRAMMAR CHECKER VIA LANGUAGETOOL API ---
+    // --- REAL-TIME GRAMMAR CHECKER & REVISION QUEUE MANAGEMENT ---
     async function checkSentenceSyntax() {
         const sentenceInput = document.getElementById("sentence-input");
         const userText = sentenceInput.value.trim();
@@ -899,11 +963,13 @@
             if (!sentenceChecked) {
                 listData.sentenceIncorrect = (listData.sentenceIncorrect || 0) + 1;
                 sentenceChecked = true;
+                addSentenceToRevisionQueue(userText, `Missing target word "${currentQuestion.targetWord}"`);
             }
             feedbackBox.className = "correction-output wrong-box";
             feedbackBox.innerHTML = `<strong>⚠️ Target Word Missing:</strong> Your sentence must include the target word <em>"${currentQuestion.targetWord}"</em>. Please edit your sentence and check again.`;
             saveDatabaseToCloud();
             updateScoreBoard();
+            renderRevisionQueue();
             document.getElementById("next-btn").style.display = "block";
             return;
         }
@@ -925,16 +991,23 @@
                     listData.sentenceCorrect = (listData.sentenceCorrect || 0) + 1;
                     sentenceChecked = true;
                 }
+                
+                // If fixing an item from the revision log, remove it
+                if (activeRevisionIndex !== null) {
+                    removeSentenceFromRevisionQueue(activeRevisionIndex);
+                    activeRevisionIndex = null;
+                }
+
                 feedbackBox.className = "correction-output correct-box";
                 feedbackBox.innerHTML = `<strong>✅ Excellent Grammar!</strong> Perfect syntax and correct target word usage.`;
             } else {
                 if (!sentenceChecked) {
                     listData.sentenceIncorrect = (listData.sentenceIncorrect || 0) + 1;
                     sentenceChecked = true;
+                    addSentenceToRevisionQueue(userText, matches[0].message);
                 }
                 feedbackBox.className = "correction-output wrong-box";
                 
-                // Construct auto-corrected sentence string
                 let correctedText = userText;
                 let offsetShift = 0;
                 let issueListHTML = "<ul>";
@@ -973,7 +1046,87 @@
 
         saveDatabaseToCloud();
         updateScoreBoard();
+        renderRevisionQueue();
         document.getElementById("next-btn").style.display = "block";
+    }
+
+    function addSentenceToRevisionQueue(text, issueReason) {
+        const listData = allLists[activeListName];
+        if (!listData.revisionQueue) listData.revisionQueue = [];
+        
+        // Prevent duplicate entries
+        const exists = listData.revisionQueue.some(item => item.text === text);
+        if (!exists) {
+            listData.revisionQueue.push({
+                text: text,
+                targetWord: currentQuestion.targetWord,
+                isTargetSpanish: currentQuestion.isTargetSpanish,
+                issue: issueReason
+            });
+        }
+    }
+
+    function removeSentenceFromRevisionQueue(index) {
+        const listData = allLists[activeListName];
+        if (listData.revisionQueue && listData.revisionQueue[index]) {
+            listData.revisionQueue.splice(index, 1);
+            saveDatabaseToCloud();
+            renderRevisionQueue();
+        }
+    }
+
+    function renderRevisionQueue() {
+        const listData = allLists[activeListName];
+        const container = document.getElementById("revision-queue-container");
+        const listEl = document.getElementById("revision-queue-list");
+        const format = document.getElementById("format").value;
+
+        if (!listData || format !== "sentence" || !listData.revisionQueue || listData.revisionQueue.length === 0) {
+            container.style.display = "none";
+            return;
+        }
+
+        container.style.display = "block";
+        document.getElementById("revision-queue-count").innerText = listData.revisionQueue.length;
+        listEl.innerHTML = "";
+
+        listData.revisionQueue.forEach((item, idx) => {
+            const div = document.createElement("div");
+            div.className = "revision-item";
+            div.innerHTML = `
+                <div class="revision-item-text">
+                    <span class="revision-item-tag">[${item.targetWord}]</span> "${item.text}"<br>
+                    <small style="color: #7f8c8d;">Reason: ${item.issue}</small>
+                </div>
+                <button type="button" class="retry-btn" onclick="loadRevisionItem(${idx})">Edit & Retry</button>
+            `;
+            listEl.appendChild(div);
+        });
+    }
+
+    function loadRevisionItem(index) {
+        const listData = allLists[activeListName];
+        const item = listData.revisionQueue[index];
+        if (!item) return;
+
+        activeRevisionIndex = index;
+        sentenceChecked = false;
+
+        currentQuestion = {
+            targetWord: item.targetWord,
+            isTargetSpanish: item.isTargetSpanish
+        };
+
+        document.getElementById("prompt").innerText = item.targetWord;
+        const sentenceInput = document.getElementById("sentence-input");
+        sentenceInput.value = item.text;
+        sentenceInput.disabled = false;
+        
+        const feedbackBox = document.getElementById("sentence-feedback");
+        feedbackBox.style.display = "none";
+        
+        sentenceInput.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function applyCorrection() {
