@@ -601,8 +601,8 @@
                 <select id="tense-select" onchange="nextTenseQuestion()">
                     <option value="random">Random Tense</option>
                     <option value="present">Present (Presente)</option>
-                    <option value="preterite">Preterite (Pretérito)</option>
-                    <option value="imperfect">Imperfect (Imperfecto)</option>
+                    <option value="preterite">Preterite (Pretérito Indefinido)</option>
+                    <option value="imperfect">Imperfect (Pretérito Imperfecto)</option>
                     <option value="future">Future (Futuro)</option>
                     <option value="conditional">Conditional (Condicional)</option>
                     <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
@@ -681,11 +681,11 @@
     ];
 
     const pronouns = [
-        { id: "yo", label: "Yo" },
-        { id: "tu", label: "Tú" },
-        { id: "el", label: "Él / Ella / Usted" },
-        { id: "nosotros", label: "Nosotros / Nosotras" },
-        { id: "ellos", label: "Ellos / Ellas / Ustedes" }
+        { id: "yo", label: "Yo", matches: ["yo"] },
+        { id: "tu", label: "Tú", matches: ["tu", "tú"] },
+        { id: "el", label: "Él / Ella / Usted", matches: ["el", "él", "ella", "usted"] },
+        { id: "nosotros", label: "Nosotros / Nosotras", matches: ["nosotros", "nosotras"] },
+        { id: "ellos", label: "Ellos / Ellas / Ustedes", matches: ["ellos", "ellas", "ustedes"] }
     ];
 
     function switchTab(tabId) {
@@ -865,7 +865,7 @@
         document.getElementById("total-verbs-count").innerText = currentVerbs.length;
     }
 
-    /* --- ADVANCED TENSE VALIDATION RULES ENGINE --- */
+    /* --- RIGOROUS CONJUGATION & PRONOUN VERIFICATION ENGINE --- */
     function nextTenseQuestion() {
         const currentVerbs = getCurrentVerbArray();
         if (currentVerbs.length === 0) return;
@@ -889,7 +889,8 @@
             tenseKey: chosenTense.key,
             tenseName: chosenTense.name,
             pronounId: pronounObj.id,
-            pronounLabel: pronounObj.label
+            pronounLabel: pronounObj.label,
+            pronounMatches: pronounObj.matches
         };
 
         document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name}`;
@@ -897,12 +898,11 @@
         document.getElementById("pronoun-prompt").innerText = `Subject Pronoun: ${pronounObj.label}`;
     }
 
-    function getExpectedConjugationPrefixes(infinitive, tenseKey, pronounId) {
+    function getConjugationForms(infinitive, tenseKey, pronounId) {
         const stem = infinitive.slice(0, -2);
         const ending = infinitive.slice(-2); // ar, er, ir
 
-        // Regular endings table
-        const regularMap = {
+        const map = {
             present: {
                 yo: [stem + 'o'],
                 tu: [stem + (ending === 'ar' ? 'as' : 'es')],
@@ -934,7 +934,7 @@
             conditional: {
                 yo: [infinitive + 'ia', infinitive + 'ía'],
                 tu: [infinitive + 'ias', infinitive + 'ías'],
-                el: [infinitive + 'ia', infinitive + 'ía'],
+                el: [infinitive + 'ia', infinitive + 'ías'],
                 nosotros: [infinitive + 'iamos', infinitive + 'íamos'],
                 ellos: [infinitive + 'ian', infinitive + 'ían']
             },
@@ -947,22 +947,7 @@
             }
         };
 
-        let result = (regularMap[tenseKey] && regularMap[tenseKey][pronounId]) ? regularMap[tenseKey][pronounId] : [];
-
-        // Common irregular verb stem overrides
-        if (infinitive === 'comer') {
-            if (tenseKey === 'preterite') {
-                if (pronounId === 'yo') result.push('comi', 'comí');
-                if (pronounId === 'el') result.push('comio', 'comió');
-            }
-        } else if (infinitive === 'hablar') {
-            if (tenseKey === 'preterite') {
-                if (pronounId === 'yo') result.push('hable', 'hablé');
-                if (pronounId === 'el') result.push('hablo', 'habló');
-            }
-        }
-
-        return result;
+        return (map[tenseKey] && map[tenseKey][pronounId]) ? map[tenseKey][pronounId] : [];
     }
 
     async function checkTenseSentence() {
@@ -976,46 +961,56 @@
 
         feedbackBox.className = "correction-output";
         feedbackBox.style.display = "block";
-        feedbackBox.innerHTML = "⏳ Validating verb conjugation and grammar...";
+        feedbackBox.innerHTML = "⏳ Validating verb conjugation, pronoun, and syntax...";
 
-        const sanitizeText = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const cleanSentence = sanitizeText(userText);
-        const targetVerb = currentTenseQuestion.verb;
+        const stripAccents = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const rawTokens = userText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(/\s+/);
+        const cleanTokens = rawTokens.map(t => stripAccents(t));
+
+        const verb = currentTenseQuestion.verb;
         const targetTenseKey = currentTenseQuestion.tenseKey;
         const targetPronounId = currentTenseQuestion.pronounId;
 
-        // 1. Tense Conjugation Verification
-        const expectedForms = getExpectedConjugationPrefixes(targetVerb, targetTenseKey, targetPronounId).map(f => sanitizeText(f));
-        const presentForms = getExpectedConjugationPrefixes(targetVerb, 'present', targetPronounId).map(f => sanitizeText(f));
-        const preteriteForms = getExpectedConjugationPrefixes(targetVerb, 'preterite', targetPronounId).map(f => sanitizeText(f));
-        const futureForms = getExpectedConjugationPrefixes(targetVerb, 'future', targetPronounId).map(f => sanitizeText(f));
+        // 1. Check Pronoun Alignment
+        if (targetPronounId !== 'yo') {
+            const allowedPronouns = currentTenseQuestion.pronounMatches;
+            const hasPronoun = cleanTokens.some(token => allowedPronouns.includes(token));
+            if (!hasPronoun && (cleanTokens.includes("yo") || cleanTokens.includes("el") || cleanTokens.includes("ella"))) {
+                feedbackBox.className = "correction-output wrong-box";
+                feedbackBox.innerHTML = `⚠️ <strong>Pronoun Mismatch:</strong> Prompt specifies <strong>${currentTenseQuestion.pronounLabel}</strong>. Please adjust your subject.`;
+                document.getElementById("tense-next-btn").style.display = "block";
+                return;
+            }
+        }
 
-        const words = cleanSentence.split(/\s+/);
-        const containsTargetForm = words.some(word => expectedForms.includes(word));
+        // 2. Check Target Conjugation
+        const validFormsRaw = getConjugationForms(verb, targetTenseKey, targetPronounId);
+        const validFormsClean = validFormsRaw.map(f => stripAccents(f));
 
-        if (!containsTargetForm) {
-            // Check if user accidentally used Present Tense instead of requested Future/Past
-            const containsPresentForm = words.some(word => presentForms.includes(word));
-            const containsPreteriteForm = words.some(word => preteriteForms.includes(word));
-            const containsFutureForm = words.some(word => futureForms.includes(word));
+        const containsTargetConjugation = cleanTokens.some(token => validFormsClean.includes(token));
 
-            let explanation = `Your sentence does not contain the target verb <strong>"${targetVerb}"</strong> conjugated in <strong>${currentTenseQuestion.tenseName}</strong> for <strong>${currentTenseQuestion.pronounLabel}</strong>.`;
+        if (!containsTargetConjugation) {
+            const presentForms = getConjugationForms(verb, 'present', targetPronounId).map(f => stripAccents(f));
+            const imperfectForms = getConjugationForms(verb, 'imperfect', targetPronounId).map(f => stripAccents(f));
+            const preteriteForms = getConjugationForms(verb, 'preterite', targetPronounId).map(f => stripAccents(f));
+
+            let reason = `Your sentence does not contain the verb <em>"${verb}"</em> conjugated correctly for <strong>${currentTenseQuestion.pronounLabel}</strong> in the <strong>${currentTenseQuestion.tenseName}</strong>.`;
             
-            if (targetTenseKey !== 'present' && containsPresentForm) {
-                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Present Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
-            } else if (targetTenseKey !== 'preterite' && containsPreteriteForm) {
-                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Preterite Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
-            } else if (targetTenseKey !== 'future' && containsFutureForm) {
-                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Future Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
+            if (cleanTokens.some(t => presentForms.includes(t))) {
+                reason = `You used the <strong>Present Tense</strong>. Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
+            } else if (cleanTokens.some(t => imperfectForms.includes(t))) {
+                reason = `You used the <strong>Imperfect Tense</strong> (e.g. <em>corría</em>). Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
+            } else if (cleanTokens.some(t => preteriteForms.includes(t))) {
+                reason = `You used the <strong>Preterite Tense</strong>. Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
             }
 
             feedbackBox.className = "correction-output wrong-box";
-            feedbackBox.innerHTML = `⚠️ <strong>Conjugation Error:</strong> ${explanation}`;
+            feedbackBox.innerHTML = `⚠️ <strong>Conjugation Error:</strong> ${reason}`;
             document.getElementById("tense-next-btn").style.display = "block";
             return;
         }
 
-        // 2. Syntax & Grammar Check via LanguageTool API
+        // 3. LanguageTool Syntax Polish
         try {
             const response = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST",
@@ -1030,7 +1025,7 @@
                 tenseScoreCount++;
                 document.getElementById("tense-score-count").innerText = tenseScoreCount;
                 feedbackBox.className = "correction-output correct-box";
-                feedbackBox.innerHTML = `<strong>✅ Excellent!</strong> Correct conjugation (<em>"${expectedForms[0]}"</em>) and clean syntax.`;
+                feedbackBox.innerHTML = `<strong>✅ Excellent!</strong> Correct conjugation (<em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>) and clean sentence structure.`;
             } else {
                 feedbackBox.className = "correction-output wrong-box";
                 let issueList = "<ul>";
