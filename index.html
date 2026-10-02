@@ -546,7 +546,7 @@
 
             <div class="sentence-card" id="sentence-container" style="display: none;">
                 <h3>
-                    <span>✍️ Use word in context:</span>
+                    <span>✍️️ Use word in context:</span>
                     <span class="sentence-score-board">
                         Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
                     </span>
@@ -597,15 +597,19 @@
 
         <div class="controls">
             <div>
+                <label for="tense-direction">Target Language: </label>
+                <select id="tense-direction" onchange="nextTenseQuestion()">
+                    <option value="es">Spanish Practice (Write in Spanish)</option>
+                    <option value="en">English Practice (Write in English)</option>
+                </select>
+            </div>
+            <div>
                 <label for="tense-select">Practice Tense: </label>
                 <select id="tense-select" onchange="nextTenseQuestion()">
                     <option value="random">Random Tense</option>
-                    <option value="present">Present (Presente)</option>
-                    <option value="preterite">Preterite (Pretérito Indefinido)</option>
-                    <option value="imperfect">Imperfect (Pretérito Imperfecto)</option>
-                    <option value="future">Future (Futuro)</option>
-                    <option value="conditional">Conditional (Condicional)</option>
-                    <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
+                    <option value="present">Present</option>
+                    <option value="past">Past</option>
+                    <option value="future">Future</option>
                 </select>
             </div>
         </div>
@@ -617,7 +621,7 @@
 
         <div id="tense-game-view">
             <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
-                <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
+                <div class="tense-tag" id="target-tense-display">Tense: Present</div>
                 <div class="prompt" id="tense-prompt">hablar (talk)</div>
                 <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
             </div>
@@ -671,21 +675,12 @@
     let currentTenseQuestion = {};
     let tenseScoreCount = 0;
 
-    const tenses = [
-        { key: "present", name: "Presente (Present)" },
-        { key: "preterite", name: "Pretérito Indefinido (Past/Preterite)" },
-        { key: "imperfect", name: "Pretérito Imperfecto (Imperfect)" },
-        { key: "future", name: "Futuro Simple (Future)" },
-        { key: "conditional", name: "Condicional Simple (Conditional)" },
-        { key: "subjunctive", name: "Presente de Subjuntivo (Subjunctive)" }
-    ];
-
-    const pronouns = [
-        { id: "yo", label: "Yo", matches: ["yo"] },
-        { id: "tu", label: "Tú", matches: ["tu", "tú"] },
-        { id: "el", label: "Él / Ella / Usted", matches: ["el", "él", "ella", "usted"] },
-        { id: "nosotros", label: "Nosotros / Nosotras", matches: ["nosotros", "nosotras"] },
-        { id: "ellos", label: "Ellos / Ellas / Ustedes", matches: ["ellos", "ellas", "ustedes"] }
+    const spanishPronouns = [
+        { id: "yo", esLabel: "Yo", enLabel: "I", esMatches: ["yo"], enMatches: ["i"] },
+        { id: "tu", esLabel: "Tú", enLabel: "You", esMatches: ["tu", "tú"], enMatches: ["you"] },
+        { id: "el", esLabel: "Él / Ella / Usted", enLabel: "He / She / You (formal)", esMatches: ["el", "él", "ella", "usted"], enMatches: ["he", "she", "you"] },
+        { id: "nosotros", esLabel: "Nosotros / Nosotras", enLabel: "We", esMatches: ["nosotros", "nosotras"], enMatches: ["we"] },
+        { id: "ellos", esLabel: "Ellos / Ellas / Ustedes", enLabel: "They / You all", esMatches: ["ellos", "ellas", "ustedes"], enMatches: ["they", "you"] }
     ];
 
     function switchTab(tabId) {
@@ -865,43 +860,55 @@
         document.getElementById("total-verbs-count").innerText = currentVerbs.length;
     }
 
-    /* --- RIGOROUS CONJUGATION & PRONOUN VERIFICATION ENGINE --- */
+    /* --- DUAL-LANGUAGE (ES/EN) TENSE QUESTION ENGINE --- */
     function nextTenseQuestion() {
         const currentVerbs = getCurrentVerbArray();
         if (currentVerbs.length === 0) return;
 
         document.getElementById("tense-feedback").style.display = "none";
         document.getElementById("tense-next-btn").style.display = "none";
-        document.getElementById("tense-sentence-input").value = "";
+        const sentenceInput = document.getElementById("tense-sentence-input");
+        sentenceInput.value = "";
 
+        const targetLang = document.getElementById("tense-direction").value; // 'es' or 'en'
         const selectedTenseKey = document.getElementById("tense-select").value;
+
+        const tenses = [
+            { key: "present", name: "Present" },
+            { key: "past", name: "Past" },
+            { key: "future", name: "Future" }
+        ];
+
         let chosenTense = tenses.find(t => t.key === selectedTenseKey);
         if (!chosenTense || selectedTenseKey === "random") {
             chosenTense = tenses[Math.floor(Math.random() * tenses.length)];
         }
 
         const verbObj = currentVerbs[Math.floor(Math.random() * currentVerbs.length)];
-        const pronounObj = pronouns[Math.floor(Math.random() * pronouns.length)];
+        const pronounObj = spanishPronouns[Math.floor(Math.random() * spanishPronouns.length)];
 
         currentTenseQuestion = {
-            verb: verbObj.es.trim().toLowerCase(),
-            translation: verbObj.en,
+            targetLang: targetLang,
+            verbEs: verbObj.es.trim().toLowerCase(),
+            verbEn: verbObj.en.trim().toLowerCase(),
             tenseKey: chosenTense.key,
             tenseName: chosenTense.name,
-            pronounId: pronounObj.id,
-            pronounLabel: pronounObj.label,
-            pronounMatches: pronounObj.matches
+            pronoun: pronounObj
         };
 
-        document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name}`;
-        document.getElementById("tense-prompt").innerText = `${verbObj.es} (${verbObj.en})`;
-        document.getElementById("pronoun-prompt").innerText = `Subject Pronoun: ${pronounObj.label}`;
+        const isSpanishTarget = targetLang === 'es';
+        document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name} (${isSpanishTarget ? 'Write in Spanish' : 'Write in English'})`;
+        document.getElementById("tense-prompt").innerText = isSpanishTarget ? `${verbObj.es} (${verbObj.en})` : `${verbObj.en} (${verbObj.es})`;
+        document.getElementById("pronoun-prompt").innerText = `Subject: ${isSpanishTarget ? pronounObj.esLabel : pronounObj.enLabel}`;
+
+        sentenceInput.placeholder = isSpanishTarget ? 
+            `Type a Spanish sentence using "${verbObj.es}" in the ${chosenTense.name} tense...` : 
+            `Type an English sentence using "${verbObj.en}" in the ${chosenTense.name} tense...`;
     }
 
-    function getConjugationForms(infinitive, tenseKey, pronounId) {
+    function getSpanishForms(infinitive, tenseKey, pronounId) {
         const stem = infinitive.slice(0, -2);
-        const ending = infinitive.slice(-2); // ar, er, ir
-
+        const ending = infinitive.slice(-2);
         const map = {
             present: {
                 yo: [stem + 'o'],
@@ -910,19 +917,12 @@
                 nosotros: [stem + (ending === 'ar' ? 'amos' : ending === 'er' ? 'emos' : 'imos')],
                 ellos: [stem + (ending === 'ar' ? 'an' : 'en')]
             },
-            preterite: {
+            past: {
                 yo: ending === 'ar' ? [stem + 'e', stem + 'é'] : [stem + 'i', stem + 'í'],
                 tu: ending === 'ar' ? [stem + 'aste'] : [stem + 'iste'],
                 el: ending === 'ar' ? [stem + 'o', stem + 'ó'] : [stem + 'io', stem + 'ió'],
                 nosotros: ending === 'ar' ? [stem + 'amos'] : [stem + 'imos'],
                 ellos: ending === 'ar' ? [stem + 'aron'] : [stem + 'ieron']
-            },
-            imperfect: {
-                yo: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
-                tu: ending === 'ar' ? [stem + 'abas'] : [stem + 'ias', stem + 'ías'],
-                el: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
-                nosotros: ending === 'ar' ? [stem + 'abamos', stem + 'ábamos'] : [stem + 'iamos', stem + 'íamos'],
-                ellos: ending === 'ar' ? [stem + 'aban'] : [stem + 'ian', stem + 'ían']
             },
             future: {
                 yo: [infinitive + 'e', infinitive + 'é'],
@@ -930,23 +930,8 @@
                 el: [infinitive + 'a', infinitive + 'á'],
                 nosotros: [infinitive + 'emos'],
                 ellos: [infinitive + 'an', infinitive + 'án']
-            },
-            conditional: {
-                yo: [infinitive + 'ia', infinitive + 'ía'],
-                tu: [infinitive + 'ias', infinitive + 'ías'],
-                el: [infinitive + 'ia', infinitive + 'ías'],
-                nosotros: [infinitive + 'iamos', infinitive + 'íamos'],
-                ellos: [infinitive + 'ian', infinitive + 'ían']
-            },
-            subjunctive: {
-                yo: [stem + (ending === 'ar' ? 'e' : 'a')],
-                tu: [stem + (ending === 'ar' ? 'es' : 'as')],
-                el: [stem + (ending === 'ar' ? 'e' : 'a')],
-                nosotros: [stem + (ending === 'ar' ? 'emos' : 'amos')],
-                ellos: [stem + (ending === 'ar' ? 'en' : 'an')]
             }
         };
-
         return (map[tenseKey] && map[tenseKey][pronounId]) ? map[tenseKey][pronounId] : [];
     }
 
@@ -961,61 +946,57 @@
 
         feedbackBox.className = "correction-output";
         feedbackBox.style.display = "block";
-        feedbackBox.innerHTML = "⏳ Validating verb conjugation, pronoun, and syntax...";
+        feedbackBox.innerHTML = "⏳ Validating sentence structure, target verb, and grammar...";
 
         const stripAccents = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const rawTokens = userText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(/\s+/);
         const cleanTokens = rawTokens.map(t => stripAccents(t));
 
-        const verb = currentTenseQuestion.verb;
-        const targetTenseKey = currentTenseQuestion.tenseKey;
-        const targetPronounId = currentTenseQuestion.pronounId;
+        const targetLang = currentTenseQuestion.targetLang; // 'es' or 'en'
+        const tenseKey = currentTenseQuestion.tenseKey; // 'present', 'past', 'future'
+        const pronounObj = currentTenseQuestion.pronoun;
 
-        // 1. Check Pronoun Alignment
-        if (targetPronounId !== 'yo') {
-            const allowedPronouns = currentTenseQuestion.pronounMatches;
-            const hasPronoun = cleanTokens.some(token => allowedPronouns.includes(token));
-            if (!hasPronoun && (cleanTokens.includes("yo") || cleanTokens.includes("el") || cleanTokens.includes("ella"))) {
+        if (targetLang === 'es') {
+            // SPANISH VALIDATION LOGIC
+            const verbEs = currentTenseQuestion.verbEs;
+            const validForms = getSpanishForms(verbEs, tenseKey, pronounObj.id).map(f => stripAccents(f));
+            const containsVerbForm = cleanTokens.some(token => validForms.includes(token));
+
+            if (!containsVerbForm) {
                 feedbackBox.className = "correction-output wrong-box";
-                feedbackBox.innerHTML = `⚠️ <strong>Pronoun Mismatch:</strong> Prompt specifies <strong>${currentTenseQuestion.pronounLabel}</strong>. Please adjust your subject.`;
+                feedbackBox.innerHTML = `⚠️ <strong>Spanish Conjugation Error:</strong> Your sentence must contain the verb <em>"${verbEs}"</em> conjugated in the <strong>${currentTenseQuestion.tenseName}</strong> tense for <strong>${pronounObj.esLabel}</strong> (e.g., <em>"${validForms[validForms.length - 1]}"</em>).`;
+                document.getElementById("tense-next-btn").style.display = "block";
+                return;
+            }
+        } else {
+            // ENGLISH VALIDATION LOGIC
+            const verbEn = currentTenseQuestion.verbEn;
+            const allowedPronouns = pronounObj.enMatches;
+            const hasEnglishPronoun = cleanTokens.some(token => allowedPronouns.includes(token));
+
+            if (!hasEnglishPronoun) {
+                feedbackBox.className = "correction-output wrong-box";
+                feedbackBox.innerHTML = `⚠️ <strong>English Subject Mismatch:</strong> Please include the correct pronoun <strong>"${pronounObj.enLabel}"</strong> in your sentence.`;
+                document.getElementById("tense-next-btn").style.display = "block";
+                return;
+            }
+
+            if (tenseKey === 'future' && !cleanTokens.includes('will') && !cleanTokens.includes("going")) {
+                feedbackBox.className = "correction-output wrong-box";
+                feedbackBox.innerHTML = `⚠️ <strong>Tense Error:</strong> Future tense in English requires <em>"will"</em> or <em>"going to"</em> (e.g. <em>"${pronounObj.enMatches[0]} will ${verbEn}"</em>).`;
                 document.getElementById("tense-next-btn").style.display = "block";
                 return;
             }
         }
 
-        // 2. Check Target Conjugation
-        const validFormsRaw = getConjugationForms(verb, targetTenseKey, targetPronounId);
-        const validFormsClean = validFormsRaw.map(f => stripAccents(f));
+        // LANGUAGETOOL SYNTAX EVALUATION (DYNAMIC LANGUAGE)
+        const langApiCode = targetLang === 'es' ? 'es' : 'en-US';
 
-        const containsTargetConjugation = cleanTokens.some(token => validFormsClean.includes(token));
-
-        if (!containsTargetConjugation) {
-            const presentForms = getConjugationForms(verb, 'present', targetPronounId).map(f => stripAccents(f));
-            const imperfectForms = getConjugationForms(verb, 'imperfect', targetPronounId).map(f => stripAccents(f));
-            const preteriteForms = getConjugationForms(verb, 'preterite', targetPronounId).map(f => stripAccents(f));
-
-            let reason = `Your sentence does not contain the verb <em>"${verb}"</em> conjugated correctly for <strong>${currentTenseQuestion.pronounLabel}</strong> in the <strong>${currentTenseQuestion.tenseName}</strong>.`;
-            
-            if (cleanTokens.some(t => presentForms.includes(t))) {
-                reason = `You used the <strong>Present Tense</strong>. Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
-            } else if (cleanTokens.some(t => imperfectForms.includes(t))) {
-                reason = `You used the <strong>Imperfect Tense</strong> (e.g. <em>corría</em>). Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
-            } else if (cleanTokens.some(t => preteriteForms.includes(t))) {
-                reason = `You used the <strong>Preterite Tense</strong>. Expected form for ${currentTenseQuestion.tenseName}: <em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>.`;
-            }
-
-            feedbackBox.className = "correction-output wrong-box";
-            feedbackBox.innerHTML = `⚠️ <strong>Conjugation Error:</strong> ${reason}`;
-            document.getElementById("tense-next-btn").style.display = "block";
-            return;
-        }
-
-        // 3. LanguageTool Syntax Polish
         try {
             const response = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ text: userText, language: "es" })
+                body: new URLSearchParams({ text: userText, language: langApiCode })
             });
 
             const data = await response.json();
@@ -1025,7 +1006,7 @@
                 tenseScoreCount++;
                 document.getElementById("tense-score-count").innerText = tenseScoreCount;
                 feedbackBox.className = "correction-output correct-box";
-                feedbackBox.innerHTML = `<strong>✅ Excellent!</strong> Correct conjugation (<em>"${validFormsRaw[validFormsRaw.length - 1]}"</em>) and clean sentence structure.`;
+                feedbackBox.innerHTML = `<strong>✅ Great Sentence!</strong> Clean ${targetLang === 'es' ? 'Spanish' : 'English'} syntax and correct tense usage.`;
             } else {
                 feedbackBox.className = "correction-output wrong-box";
                 let issueList = "<ul>";
@@ -1037,7 +1018,7 @@
             tenseScoreCount++;
             document.getElementById("tense-score-count").innerText = tenseScoreCount;
             feedbackBox.className = "correction-output correct-box";
-            feedbackBox.innerHTML = `<strong>✅ Sentence Accepted!</strong> Correct verb conjugation detected.`;
+            feedbackBox.innerHTML = `<strong>✅ Sentence Accepted!</strong> Valid sentence structure detected.`;
         }
 
         document.getElementById("tense-next-btn").style.display = "block";
@@ -1045,9 +1026,10 @@
 
     function speakTenseSentence() {
         const text = document.getElementById("tense-sentence-input").value;
+        const targetLang = currentTenseQuestion.targetLang || 'es';
         if (text && 'speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'es-ES';
+            utterance.lang = targetLang === 'es' ? 'es-ES' : 'en-US';
             window.speechSynthesis.speak(utterance);
         }
     }
