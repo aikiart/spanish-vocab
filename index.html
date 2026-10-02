@@ -128,6 +128,18 @@
             flex-grow: 1;
         }
 
+        .instruction-banner {
+            font-size: 13px;
+            color: #a5b4fc;
+            background-color: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: left;
+            line-height: 1.4;
+        }
+
         .controls {
             display: flex;
             justify-content: center;
@@ -578,6 +590,11 @@
             <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
         </div>
 
+        <!-- TOP INSTRUCTION BANNER -->
+        <div class="instruction-banner">
+            💡 <strong>Instruction:</strong> Please upload a list of infinitive verbs in 2 columns, spanish-english, do this as a csv file or paste it.
+        </div>
+
         <!-- EDIT ACTIVE VERB LIST SECTION -->
         <details class="upload-section" id="verb-editor-details">
             <summary>✏️ Edit Active Verb List (Verbs & Translations)</summary>
@@ -634,9 +651,12 @@
                 <label for="tense-select">Practice Tense: </label>
                 <select id="tense-select" onchange="nextTenseQuestion()">
                     <option value="random">Random Tense</option>
-                    <option value="present">Present</option>
-                    <option value="past">Past</option>
-                    <option value="future">Future</option>
+                    <option value="present">Present (Presente)</option>
+                    <option value="preterite">Preterite (Pretérito Indefinido)</option>
+                    <option value="imperfect">Imperfect (Pretérito Imperfecto)</option>
+                    <option value="future">Future (Futuro)</option>
+                    <option value="conditional">Conditional (Condicional)</option>
+                    <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
                 </select>
             </div>
         </div>
@@ -648,7 +668,7 @@
 
         <div id="tense-game-view">
             <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
-                <div class="tense-tag" id="target-tense-display">Tense: Present</div>
+                <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
                 <div class="prompt" id="tense-prompt">hablar (talk)</div>
                 <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
             </div>
@@ -708,6 +728,15 @@
         { id: "el", esLabel: "Él / Ella / Usted", enLabel: "He / She / You (formal)", esMatches: ["el", "él", "ella", "usted"], enMatches: ["he", "she", "you"] },
         { id: "nosotros", esLabel: "Nosotros / Nosotras", enLabel: "We", esMatches: ["nosotros", "nosotras"], enMatches: ["we"] },
         { id: "ellos", esLabel: "Ellos / Ellas / Ustedes", enLabel: "They / You all", esMatches: ["ellos", "ellas", "ustedes"], enMatches: ["they", "you"] }
+    ];
+
+    const tenses = [
+        { key: "present", name: "Presente (Present)" },
+        { key: "preterite", name: "Pretérito Indefinido (Preterite)" },
+        { key: "imperfect", name: "Pretérito Imperfecto (Imperfect)" },
+        { key: "future", name: "Futuro Simple (Future)" },
+        { key: "conditional", name: "Condicional Simple (Conditional)" },
+        { key: "subjunctive", name: "Presente de Subjuntivo (Subjunctive)" }
     ];
 
     function switchTab(tabId) {
@@ -800,7 +829,6 @@
         }
     }
 
-    /* --- CLOUD VERB LIST EDITOR LOGIC --- */
     function renderVerbListDropdown() {
         const select = document.getElementById("active-verb-list-select");
         select.innerHTML = "";
@@ -985,12 +1013,6 @@
 
         const selectedTenseKey = document.getElementById("tense-select").value;
 
-        const tenses = [
-            { key: "present", name: "Present" },
-            { key: "past", name: "Past" },
-            { key: "future", name: "Future" }
-        ];
-
         let chosenTense = tenses.find(t => t.key === selectedTenseKey);
         if (!chosenTense || selectedTenseKey === "random") {
             chosenTense = tenses[Math.floor(Math.random() * tenses.length)];
@@ -1018,10 +1040,52 @@
             `Type an English sentence using "${verbObj.en}" in the ${chosenTense.name} tense...`;
     }
 
+    /* --- COMPREHENSIVE GRAMMAR & IRREGULAR CONJUGATION ENGINE --- */
     function getSpanishForms(infinitive, tenseKey, pronounId) {
-        const stem = infinitive.slice(0, -2);
-        const ending = infinitive.slice(-2);
-        const map = {
+        const inf = infinitive.trim().toLowerCase();
+        
+        // Irregular verb lookup table
+        const irregulars = {
+            ir: {
+                present: { yo: ['voy'], tu: ['vas'], el: ['va'], nosotros: ['vamos'], ellos: ['van'] },
+                preterite: { yo: ['fui'], tu: ['fuiste'], el: ['fue'], nosotros: ['fuimos'], ellos: ['fueron'] },
+                imperfect: { yo: ['iba'], tu: ['ibas'], el: ['iba'], nosotros: ['ibamos', 'íbamos'], ellos: ['iban'] },
+                subjunctive: { yo: ['vaya'], tu: ['vayas'], el: ['vaya'], nosotros: ['vayamos'], ellos: ['vayan'] }
+            },
+            ser: {
+                present: { yo: ['soy'], tu: ['eres'], el: ['es'], nosotros: ['somos'], ellos: ['son'] },
+                preterite: { yo: ['fui'], tu: ['fuiste'], el: ['fue'], nosotros: ['fuimos'], ellos: ['fueron'] },
+                imperfect: { yo: ['era'], tu: ['eras'], el: ['era'], nosotros: ['eramos', 'éramos'], ellos: ['eran'] },
+                subjunctive: { yo: ['sea'], tu: ['seas'], el: ['sea'], nosotros: ['seamos'], ellos: ['sean'] }
+            },
+            estar: {
+                present: { yo: ['estoy'], tu: ['estas', 'estás'], el: ['esta', 'está'], nosotros: ['estamos'], ellos: ['estan', 'están'] },
+                preterite: { yo: ['estuve'], tu: ['estuviste'], el: ['estuvo'], nosotros: ['estuvimos'], ellos: ['estuvieron'] },
+                subjunctive: { yo: ['este', 'esté'], tu: ['estes', 'estés'], el: ['este', 'esté'], nosotros: ['estemos'], ellos: ['esten', 'estén'] }
+            },
+            hacer: {
+                present: { yo: ['hago'] },
+                preterite: { yo: ['hice'], tu: ['hiciste'], el: ['hizo'], nosotros: ['hicimos'], ellos: ['hicieron'] },
+                future: { yo: ['hare', 'haré'], tu: ['haras', 'harás'], el: ['hara', 'hará'], nosotros: ['haremos'], ellos: ['haran', 'harán'] },
+                conditional: { yo: ['haria', 'haría'], tu: ['harias', 'harías'], el: ['haria', 'haría'], nosotros: ['hariamos', 'haríamos'], ellos: ['harian', 'harían'] },
+                subjunctive: { yo: ['haga'], tu: ['hagas'], el: ['haga'], nosotros: ['hagamos'], ellos: ['hagan'] }
+            },
+            tener: {
+                present: { yo: ['tengo'], tu: ['tienes'], el: ['tiene'], ellos: ['tienen'] },
+                preterite: { yo: ['tuve'], tu: ['tuviste'], el: ['tuvo'], nosotros: ['tuvimos'], ellos: ['tuvieron'] },
+                future: { yo: ['tendre', 'tendré'], tu: ['tendras', 'tendrás'], el: ['tendra', 'tendrá'], nosotros: ['tendremos'], ellos: ['tendran', 'tendrán'] },
+                subjunctive: { yo: ['tenga'], tu: ['tengas'], el: ['tenga'], nosotros: ['tengamos'], ellos: ['tengan'] }
+            }
+        };
+
+        if (irregulars[inf] && irregulars[inf][tenseKey] && irregulars[inf][tenseKey][pronounId]) {
+            return irregulars[inf][tenseKey][pronounId];
+        }
+
+        const stem = inf.slice(0, -2);
+        const ending = inf.slice(-2);
+
+        const regularRules = {
             present: {
                 yo: [stem + 'o'],
                 tu: [stem + (ending === 'ar' ? 'as' : 'es')],
@@ -1029,22 +1093,44 @@
                 nosotros: [stem + (ending === 'ar' ? 'amos' : ending === 'er' ? 'emos' : 'imos')],
                 ellos: [stem + (ending === 'ar' ? 'an' : 'en')]
             },
-            past: {
+            preterite: {
                 yo: ending === 'ar' ? [stem + 'e', stem + 'é'] : [stem + 'i', stem + 'í'],
                 tu: ending === 'ar' ? [stem + 'aste'] : [stem + 'iste'],
                 el: ending === 'ar' ? [stem + 'o', stem + 'ó'] : [stem + 'io', stem + 'ió'],
                 nosotros: ending === 'ar' ? [stem + 'amos'] : [stem + 'imos'],
                 ellos: ending === 'ar' ? [stem + 'aron'] : [stem + 'ieron']
             },
+            imperfect: {
+                yo: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
+                tu: ending === 'ar' ? [stem + 'abas'] : [stem + 'ias', stem + 'ías'],
+                el: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
+                nosotros: ending === 'ar' ? [stem + 'abamos', stem + 'ábamos'] : [stem + 'iamos', stem + 'íamos'],
+                ellos: ending === 'ar' ? [stem + 'aban'] : [stem + 'ian', stem + 'ían']
+            },
             future: {
-                yo: [infinitive + 'e', infinitive + 'é'],
-                tu: [infinitive + 'as', infinitive + 'ás'],
-                el: [infinitive + 'a', infinitive + 'á'],
-                nosotros: [infinitive + 'emos'],
-                ellos: [infinitive + 'an', infinitive + 'án']
+                yo: [inf + 'e', inf + 'é'],
+                tu: [inf + 'as', inf + 'ás'],
+                el: [inf + 'a', inf + 'á'],
+                nosotros: [inf + 'emos'],
+                ellos: [inf + 'an', inf + 'án']
+            },
+            conditional: {
+                yo: [inf + 'ia', inf + 'ía'],
+                tu: [inf + 'ias', inf + 'ías'],
+                el: [inf + 'ia', inf + 'ía'],
+                nosotros: [inf + 'iamos', inf + 'íamos'],
+                ellos: [inf + 'ian', inf + 'ían']
+            },
+            subjunctive: {
+                yo: [stem + (ending === 'ar' ? 'e' : 'a')],
+                tu: [stem + (ending === 'ar' ? 'es' : 'as')],
+                el: [stem + (ending === 'ar' ? 'e' : 'a')],
+                nosotros: [stem + (ending === 'ar' ? 'emos' : 'amos')],
+                ellos: [stem + (ending === 'ar' ? 'en' : 'an')]
             }
         };
-        return (map[tenseKey] && map[tenseKey][pronounId]) ? map[tenseKey][pronounId] : [];
+
+        return (regularRules[tenseKey] && regularRules[tenseKey][pronounId]) ? regularRules[tenseKey][pronounId] : [];
     }
 
     async function checkTenseSentence() {
