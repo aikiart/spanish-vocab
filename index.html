@@ -546,7 +546,7 @@
 
             <div class="sentence-card" id="sentence-container" style="display: none;">
                 <h3>
-                    <span>✍️️ Use word in context:</span>
+                    <span>✍️ Use word in context:</span>
                     <span class="sentence-score-board">
                         Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
                     </span>
@@ -578,6 +578,32 @@
             <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
         </div>
 
+        <!-- EDIT ACTIVE VERB LIST SECTION -->
+        <details class="upload-section" id="verb-editor-details">
+            <summary>✏️ Edit Active Verb List (Verbs & Translations)</summary>
+            <div class="upload-controls">
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                    <input type="text" id="add-verb-es" placeholder="Spanish Verb (e.g. hablar)" style="width: 40%;">
+                    <input type="text" id="add-verb-en" placeholder="English Translation (e.g. talk)" style="width: 40%;">
+                    <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleVerbPair()">+ Add</button>
+                </div>
+                <div class="editor-table-container">
+                    <table class="word-editor-table">
+                        <thead>
+                            <tr>
+                                <th>Spanish Verb</th>
+                                <th>English Translation</th>
+                                <th style="width: 60px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="verb-editor-table-body"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveVerbListEdits()">Save Changes</button>
+            </div>
+        </details>
+
+        <!-- CREATE NEW VERB LIST SECTION -->
         <details class="upload-section" id="verb-upload-details">
             <summary>➕ Import & Save New Verb List to Cloud</summary>
             <div class="upload-controls">
@@ -597,10 +623,11 @@
 
         <div class="controls">
             <div>
-                <label for="tense-direction">Target Language: </label>
+                <label for="tense-direction">Direction: </label>
                 <select id="tense-direction" onchange="nextTenseQuestion()">
-                    <option value="es">Spanish Practice (Write in Spanish)</option>
-                    <option value="en">English Practice (Write in English)</option>
+                    <option value="es-en">Spanish ➔ English</option>
+                    <option value="en-es">English ➔ Spanish</option>
+                    <option value="mixed">Mixed (Both)</option>
                 </select>
             </div>
             <div>
@@ -693,8 +720,9 @@
         } else {
             document.getElementById('tab-btn-tense').classList.add('active');
             document.getElementById('tense-tab').classList.add('active');
+            renderVerbEditorTable();
             const currentListVerbs = getCurrentVerbArray();
-            if (currentListVerbs.length > 0 && !currentTenseQuestion.verb) {
+            if (currentListVerbs.length > 0 && !currentTenseQuestion.verbEs) {
                 nextTenseQuestion();
             }
         }
@@ -717,6 +745,7 @@
                 renderListDropdown();
                 renderVerbListDropdown();
                 loadActiveListState();
+                renderVerbEditorTable();
                 nextQuestion();
                 updateVerbListUI();
             } else {
@@ -750,6 +779,7 @@
         renderListDropdown();
         renderVerbListDropdown();
         loadActiveListState();
+        renderVerbEditorTable();
         nextQuestion();
         updateVerbListUI();
     }
@@ -770,6 +800,7 @@
         }
     }
 
+    /* --- CLOUD VERB LIST EDITOR LOGIC --- */
     function renderVerbListDropdown() {
         const select = document.getElementById("active-verb-list-select");
         select.innerHTML = "";
@@ -785,7 +816,78 @@
     function switchVerbList(name) {
         activeVerbListName = name;
         updateVerbListUI();
+        renderVerbEditorTable();
         saveDatabaseToCloud();
+        nextTenseQuestion();
+    }
+
+    function renderVerbEditorTable() {
+        const tbody = document.getElementById("verb-editor-table-body");
+        tbody.innerHTML = "";
+        const listData = allVerbLists[activeVerbListName];
+
+        if (!listData || !listData.verbs) return;
+
+        listData.verbs.forEach((pair, idx) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><input type="text" value="${pair.es}" id="edit-verb-es-${idx}"></td>
+                <td><input type="text" value="${pair.en}" id="edit-verb-en-${idx}"></td>
+                <td><button type="button" class="action-btn danger-btn sm-btn" onclick="deleteVerbPair(${idx})">🗑️</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addSingleVerbPair() {
+        const esInput = document.getElementById("add-verb-es");
+        const enInput = document.getElementById("add-verb-en");
+        const esVal = esInput.value.trim();
+        const enVal = enInput.value.trim();
+
+        if (!esVal || !enVal) {
+            alert("Please enter both Spanish verb and English translation.");
+            return;
+        }
+
+        const listData = allVerbLists[activeVerbListName];
+        if (!listData.verbs) listData.verbs = [];
+
+        listData.verbs.push({ es: esVal, en: enVal });
+        esInput.value = "";
+        enInput.value = "";
+
+        renderVerbEditorTable();
+        saveDatabaseToCloud();
+        updateVerbListUI();
+    }
+
+    function deleteVerbPair(index) {
+        const listData = allVerbLists[activeVerbListName];
+        if (listData && listData.verbs) {
+            listData.verbs.splice(index, 1);
+            renderVerbEditorTable();
+            saveDatabaseToCloud();
+            updateVerbListUI();
+            nextTenseQuestion();
+        }
+    }
+
+    function saveVerbListEdits() {
+        const listData = allVerbLists[activeVerbListName];
+        if (!listData || !listData.verbs) return;
+
+        const updatedVerbs = [];
+        listData.verbs.forEach((_, idx) => {
+            const esVal = document.getElementById(`edit-verb-es-${idx}`).value.trim();
+            const enVal = document.getElementById(`edit-verb-en-${idx}`).value.trim();
+            if (esVal && enVal) updatedVerbs.push({ es: esVal, en: enVal });
+        });
+
+        listData.verbs = updatedVerbs;
+        saveDatabaseToCloud();
+        updateVerbListUI();
+        alert("Verb list updates saved successfully!");
         nextTenseQuestion();
     }
 
@@ -812,6 +914,7 @@
         document.getElementById("verb-upload-details").open = false;
 
         renderVerbListDropdown();
+        renderVerbEditorTable();
         updateVerbListUI();
         saveDatabaseToCloud();
         nextTenseQuestion();
@@ -842,6 +945,7 @@
             delete allVerbLists[activeVerbListName];
             activeVerbListName = Object.keys(allVerbLists)[0];
             renderVerbListDropdown();
+            renderVerbEditorTable();
             updateVerbListUI();
             saveDatabaseToCloud();
             nextTenseQuestion();
@@ -860,7 +964,7 @@
         document.getElementById("total-verbs-count").innerText = currentVerbs.length;
     }
 
-    /* --- DUAL-LANGUAGE (ES/EN) TENSE QUESTION ENGINE --- */
+    /* --- DUAL-DIRECTION TENSE QUESTION ENGINE --- */
     function nextTenseQuestion() {
         const currentVerbs = getCurrentVerbArray();
         if (currentVerbs.length === 0) return;
@@ -870,7 +974,15 @@
         const sentenceInput = document.getElementById("tense-sentence-input");
         sentenceInput.value = "";
 
-        const targetLang = document.getElementById("tense-direction").value; // 'es' or 'en'
+        const directionSetting = document.getElementById("tense-direction").value;
+        let targetLang = "en";
+
+        if (directionSetting === "en-es") {
+            targetLang = "es";
+        } else if (directionSetting === "mixed") {
+            targetLang = Math.random() < 0.5 ? "es" : "en";
+        }
+
         const selectedTenseKey = document.getElementById("tense-select").value;
 
         const tenses = [
@@ -898,7 +1010,7 @@
 
         const isSpanishTarget = targetLang === 'es';
         document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name} (${isSpanishTarget ? 'Write in Spanish' : 'Write in English'})`;
-        document.getElementById("tense-prompt").innerText = isSpanishTarget ? `${verbObj.es} (${verbObj.en})` : `${verbObj.en} (${verbObj.es})`;
+        document.getElementById("tense-prompt").innerText = isSpanishTarget ? `${verbObj.en} ➔${verbObj.es}` : `${verbObj.es} ➔${verbObj.en}`;
         document.getElementById("pronoun-prompt").innerText = `Subject: ${isSpanishTarget ? pronounObj.esLabel : pronounObj.enLabel}`;
 
         sentenceInput.placeholder = isSpanishTarget ? 
@@ -952,12 +1064,11 @@
         const rawTokens = userText.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(/\s+/);
         const cleanTokens = rawTokens.map(t => stripAccents(t));
 
-        const targetLang = currentTenseQuestion.targetLang; // 'es' or 'en'
-        const tenseKey = currentTenseQuestion.tenseKey; // 'present', 'past', 'future'
+        const targetLang = currentTenseQuestion.targetLang;
+        const tenseKey = currentTenseQuestion.tenseKey;
         const pronounObj = currentTenseQuestion.pronoun;
 
         if (targetLang === 'es') {
-            // SPANISH VALIDATION LOGIC
             const verbEs = currentTenseQuestion.verbEs;
             const validForms = getSpanishForms(verbEs, tenseKey, pronounObj.id).map(f => stripAccents(f));
             const containsVerbForm = cleanTokens.some(token => validForms.includes(token));
@@ -969,7 +1080,6 @@
                 return;
             }
         } else {
-            // ENGLISH VALIDATION LOGIC
             const verbEn = currentTenseQuestion.verbEn;
             const allowedPronouns = pronounObj.enMatches;
             const hasEnglishPronoun = cleanTokens.some(token => allowedPronouns.includes(token));
@@ -989,7 +1099,6 @@
             }
         }
 
-        // LANGUAGETOOL SYNTAX EVALUATION (DYNAMIC LANGUAGE)
         const langApiCode = targetLang === 'es' ? 'es' : 'en-US';
 
         try {
@@ -1379,6 +1488,7 @@
                     renderListDropdown();
                     renderVerbListDropdown();
                     loadActiveListState();
+                    renderVerbEditorTable();
                     updateVerbListUI();
                     saveDatabaseToCloud();
                     nextQuestion();
