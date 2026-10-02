@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Quiz Manager</title>
+    <title>Language Practice Studio</title>
     <style>
         :root {
             --bg-main: #0b0f17;
@@ -70,9 +70,40 @@
         .sync-status {
             font-size: 13px;
             color: var(--accent-success);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-weight: 500;
         }
+
+        /* TAB NAVIGATION BAR */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            background-color: var(--input-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--input-border);
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
         .list-selector-bar {
             background-color: var(--input-bg);
@@ -149,21 +180,19 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .score-board span {
-            color: var(--text-primary);
-        }
+        .score-board span { color: var(--text-primary); }
 
         .prompt-wrapper {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
-            margin: 25px 0;
+            margin: 20px 0;
             min-height: 45px;
         }
 
         .prompt {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 800;
             color: var(--text-primary);
             margin: 0;
@@ -181,9 +210,7 @@
             transition: all 0.2s;
         }
 
-        .audio-btn:hover {
-            background-color: rgba(99, 102, 241, 0.25);
-        }
+        .audio-btn:hover { background-color: rgba(99, 102, 241, 0.25); }
 
         .options-grid {
             display: grid;
@@ -285,7 +312,6 @@
             resize: vertical;
         }
 
-        /* --- LIST EDITOR COMPONENT STYLES --- */
         .editor-table-container {
             max-height: 260px;
             overflow-y: auto;
@@ -318,11 +344,7 @@
             font-size: 13px;
         }
 
-        .sm-btn {
-            padding: 5px 10px;
-            font-size: 12px;
-            border-radius: 6px;
-        }
+        .sm-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 
         .backup-bar {
             margin-top: 25px;
@@ -350,10 +372,6 @@
         .danger-btn { background-color: var(--accent-danger); }
         .danger-btn:hover { background-color: var(--accent-danger-hover); }
 
-        #next-btn { display: none; margin: 20px auto 0 auto; }
-        .completion-box { display: none; margin: 20px 0; }
-
-        /* --- SENTENCE PRACTICE & REVISION QUEUE STYLES --- */
         .sentence-card {
             margin-top: 20px;
             padding-top: 20px;
@@ -415,230 +433,218 @@
             font-weight: 500;
         }
 
-        .suggestion-box {
-            background: var(--input-bg);
-            border: 1px solid var(--input-border);
-            padding: 10px 14px;
+        .tense-tag {
+            background-color: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+            padding: 4px 10px;
             border-radius: 6px;
-            margin-top: 10px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .apply-btn {
-            background-color: var(--accent-success);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            font-size: 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        .apply-btn:hover { background-color: var(--accent-success-hover); }
-
-        /* Revision Queue Section */
-        .revision-queue-card {
-            margin-top: 25px;
-            padding: 18px;
-            background-color: rgba(245, 158, 11, 0.05);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: 10px;
-            text-align: left;
-        }
-
-        .revision-queue-card h4 {
-            margin: 0 0 12px 0;
-            color: #fbbf24;
-            font-size: 15px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .revision-item {
-            background: var(--input-bg);
-            border: 1px solid var(--input-border);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .revision-item-text {
             font-size: 13px;
-            color: var(--text-primary);
-            flex-grow: 1;
-        }
-
-        .revision-item-tag {
-            font-weight: 700;
-            color: #f59e0b;
-        }
-
-        .retry-btn {
-            background-color: #f59e0b;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            font-size: 12px;
             font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            white-space: nowrap;
+            display: inline-block;
+            margin-bottom: 10px;
         }
 
-        .retry-btn:hover { background-color: #d97706; }
+        #next-btn, #tense-next-btn { display: none; margin: 20px auto 0 auto; }
+        .completion-box { display: none; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <div class="quiz-container">
-    <h1>Vocabulary Quiz</h1>
+    <h1>Language Practice Studio</h1>
     <div id="user-display" class="user-tag">Workspace: Default</div>
     <div id="sync-msg" class="sync-status">Connecting to Cloud...</div>
 
-    <!-- Active List Selector -->
-    <div class="list-selector-bar">
-        <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
-        <select id="active-list-select" onchange="switchList(this.value)"></select>
-        <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
+    <!-- TAB NAVIGATION BAR -->
+    <div class="nav-tabs">
+        <button type="button" class="tab-btn active" id="tab-btn-vocab" onclick="switchTab('vocab-tab')">📚 Vocab Quiz</button>
+        <button type="button" class="tab-btn" id="tab-btn-tense" onclick="switchTab('tense-tab')">✍️️ Verb Tenses</button>
     </div>
 
-    <!-- Edit Words in Active List Section -->
-    <details class="upload-section" id="editor-details">
-        <summary>✏️ Edit Active List (Words & Translations)</summary>
-        <div class="upload-controls">
-            <!-- Add Single Word Pair Row -->
-            <div style="display: flex; gap: 8px; margin-top: 5px;">
-                <input type="text" id="add-es" placeholder="Spanish Word" style="width: 40%;">
-                <input type="text" id="add-en" placeholder="English Translation" style="width: 40%;">
-                <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleWordPair()">+ Add</button>
-            </div>
-
-            <!-- List Editor Table Container -->
-            <div class="editor-table-container">
-                <table class="word-editor-table">
-                    <thead>
-                        <tr>
-                            <th>Spanish</th>
-                            <th>English</th>
-                            <th style="width: 60px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="editor-table-body">
-                        <!-- Dynamically Populated -->
-                    </tbody>
-                </table>
-            </div>
-            <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveListEdits()">Save Changes</button>
+    <!-- TAB 1: VOCABULARY QUIZ -->
+    <div id="vocab-tab" class="tab-content active">
+        <div class="list-selector-bar">
+            <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
+            <select id="active-list-select" onchange="switchList(this.value)"></select>
+            <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
         </div>
-    </details>
 
-    <!-- Create/Add New Word List Form -->
-    <details class="upload-section" id="upload-details">
-        <summary>➕ Create / Add New Vocabulary List</summary>
-        <div class="upload-controls">
+        <details class="upload-section" id="editor-details">
+            <summary>✏️ Edit Active List (Words & Translations)</summary>
+            <div class="upload-controls">
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                    <input type="text" id="add-es" placeholder="Spanish Word" style="width: 40%;">
+                    <input type="text" id="add-en" placeholder="English Translation" style="width: 40%;">
+                    <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleWordPair()">+ Add</button>
+                </div>
+                <div class="editor-table-container">
+                    <table class="word-editor-table">
+                        <thead>
+                            <tr>
+                                <th>Spanish</th>
+                                <th>English</th>
+                                <th style="width: 60px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editor-table-body"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveListEdits()">Save Changes</button>
+            </div>
+        </details>
+
+        <details class="upload-section" id="upload-details">
+            <summary>➕ Create / Add New Vocabulary List</summary>
+            <div class="upload-controls">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
+                    <input type="text" id="new-list-name" placeholder="e.g. Action Verbs" style="width: 95%; margin-top: 4px;">
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload CSV/TXT File (2 columns):</label><br>
+                    <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                </div>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste word pairs below (e.g. <code>hablar, to speak</code>):</p>
+                <textarea id="paste-input" placeholder="hablar, to speak&#10;comer, to eat&#10;vivir, to live"></textarea>
+                <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewList()">Save New List</button>
+            </div>
+        </details>
+
+        <div class="controls">
             <div>
-                <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
-                <input type="text" id="new-list-name" placeholder="e.g. Program A: -ment words" style="width: 95%; margin-top: 4px;">
+                <label for="direction">Direction: </label>
+                <select id="direction" onchange="saveCurrentState(); nextQuestion();">
+                    <option value="es-en">Spanish ➔ English</option>
+                    <option value="en-es">English ➔ Spanish</option>
+                    <option value="mixed">Mixed (Both)</option>
+                </select>
             </div>
             <div>
-                <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload Local File (.txt / .csv):</label><br>
-                <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                <label for="format">Type: </label>
+                <select id="format" onchange="saveCurrentState(); nextQuestion();">
+                    <option value="write">Write-In</option>
+                    <option value="mc">Multiple Choice</option>
+                    <option value="sentence">Sentence Builder</option>
+                </select>
             </div>
-            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste word pairs below (one per line, e.g. <code>palabra, word</code>):</p>
-            <textarea id="paste-input" placeholder="dominar, master&#10;profundamente, deeply&#10;aumento, increase"></textarea>
-            <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewList()">Save New List</button>
-        </div>
-    </details>
-
-    <div class="controls">
-        <div>
-            <label for="direction">Direction: </label>
-            <select id="direction" onchange="saveCurrentState(); nextQuestion();">
-                <option value="es-en">Spanish ➔ English</option>
-                <option value="en-es">English ➔ Spanish</option>
-                <option value="mixed">Mixed (Both)</option>
-            </select>
-        </div>
-        <div>
-            <label for="format">Type: </label>
-            <select id="format" onchange="saveCurrentState(); nextQuestion();">
-                <option value="write">Write-In</option>
-                <option value="mc">Multiple Choice</option>
-                <option value="sentence">Sentence Builder</option>
-            </select>
-        </div>
-    </div>
-
-    <label class="toggle-container">
-        <input type="checkbox" id="include-mastered" onchange="saveCurrentState(); nextQuestion();">
-        Include previously mastered words
-    </label>
-
-    <div class="score-board">
-        Mastered: <span id="mastered-count">0</span> / <span id="total-words">0</span> | 
-        Score: <span id="score">0</span> / <span id="total">0</span>
-    </div>
-
-    <!-- Active Game View -->
-    <div id="game-view">
-        <div class="prompt-wrapper">
-            <div class="prompt" id="prompt">Word</div>
-            <button type="button" class="audio-btn" onclick="replayAudio()" title="Listen to pronunciation">🔊</button>
         </div>
 
-        <!-- Multiple Choice Options -->
-        <div class="options-grid" id="options" style="display: none;"></div>
+        <label class="toggle-container">
+            <input type="checkbox" id="include-mastered" onchange="saveCurrentState(); nextQuestion();">
+            Include previously mastered words
+        </label>
 
-        <!-- Write-In Input Area -->
-        <div class="write-input-container" id="write-container">
-            <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
-            <button type="button" class="action-btn" id="submit-btn" onclick="checkTextAnswer()">Submit</button>
+        <div class="score-board">
+            Mastered: <span id="mastered-count">0</span> / <span id="total-words">0</span> | 
+            Score: <span id="score">0</span> / <span id="total">0</span>
         </div>
 
-        <!-- Sentence Practice Component -->
-        <div class="sentence-card" id="sentence-container" style="display: none;">
-            <h3>
-                <span>✍️ Use word in context:</span>
-                <span class="sentence-score-board">
-                    Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
-                </span>
-            </h3>
-            <textarea id="sentence-input" class="sentence-input-box" rows="3" placeholder="Type a sentence using this word in context..."></textarea>
-            <div style="margin-top: 12px; display: flex; gap: 10px;">
-                <button type="button" class="action-btn" id="check-sentence-btn" style="background-color: var(--accent-success);" onclick="checkSentenceSyntax()">Check Grammar & Syntax</button>
-                <button type="button" class="audio-btn" id="sentence-audio-btn" onclick="speakSentence()" title="Listen to sentence">🔊 Hear Sentence</button>
+        <div id="game-view">
+            <div class="prompt-wrapper">
+                <div class="prompt" id="prompt">Word</div>
+                <button type="button" class="audio-btn" onclick="replayAudio()" title="Listen">🔊</button>
             </div>
-            
-            <div id="sentence-feedback" class="correction-output"></div>
+
+            <div class="options-grid" id="options" style="display: none;"></div>
+
+            <div class="write-input-container" id="write-container">
+                <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
+                <button type="button" class="action-btn" id="submit-btn" onclick="checkTextAnswer()">Submit</button>
+            </div>
+
+            <div class="sentence-card" id="sentence-container" style="display: none;">
+                <h3>
+                    <span>✍️ Use word in context:</span>
+                    <span class="sentence-score-board">
+                        Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
+                    </span>
+                </h3>
+                <textarea id="sentence-input" class="sentence-input-box" rows="3" placeholder="Type a sentence using this word in context..."></textarea>
+                <div style="margin-top: 12px; display: flex; gap: 10px;">
+                    <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkSentenceSyntax()">Check Syntax</button>
+                    <button type="button" class="audio-btn" onclick="speakSentence()">🔊 Hear Sentence</button>
+                </div>
+                <div id="sentence-feedback" class="correction-output"></div>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+            <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
         </div>
 
-        <div class="feedback" id="feedback"></div>
-
-        <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
-
-        <!-- Revision History Queue -->
-        <div class="revision-queue-card" id="revision-queue-container" style="display: none;">
-            <h4>
-                <span>📝 Sentences Needing Revision (<span id="revision-queue-count">0</span>)</span>
-            </h4>
-            <div id="revision-queue-list"></div>
+        <div class="completion-box" id="completion-view">
+            <h2>🎉 All Words Mastered! 🎉</h2>
+            <p style="color: var(--text-secondary);">You have completed every word in this list!</p>
+            <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress</button>
         </div>
     </div>
 
-    <!-- Completion Screen -->
-    <div class="completion-box" id="completion-view">
-        <h2>🎉 All Words Mastered! 🎉</h2>
-        <p style="color: var(--text-secondary);">You have completed every word in this list!</p>
-        <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress for This List</button>
+    <!-- TAB 2: VERB TENSE CONJUGATION & SENTENCE PRACTICE -->
+    <div id="tense-tab" class="tab-content">
+        <!-- Active Verb List Selector -->
+        <div class="list-selector-bar">
+            <label for="active-verb-list-select" style="font-weight: 600; color: var(--text-secondary);">Active Verb List:</label>
+            <select id="active-verb-list-select" onchange="switchVerbList(this.value)"></select>
+            <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
+        </div>
+
+        <details class="upload-section" id="verb-upload-details">
+            <summary>➕ Import & Save New Verb List to Cloud</summary>
+            <div class="upload-controls">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
+                    <input type="text" id="new-verb-list-name" placeholder="e.g. Regular -AR Verbs" style="width: 95%; margin-top: 4px;">
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload Verb File (.csv / .txt):</label><br>
+                    <input type="file" id="verb-file-input" accept=".txt,.csv" onchange="handleVerbFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                </div>
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste 2-column list (Infinitive, English):</p>
+                <textarea id="verb-paste-input" placeholder="hablar, to speak&#10;comer, to eat&#10;vivir, to live&#10;escribir, to write"></textarea>
+                <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewVerbList()">Save Verb List to Cloud</button>
+            </div>
+        </details>
+
+        <div class="controls">
+            <div>
+                <label for="tense-select">Practice Tense: </label>
+                <select id="tense-select" onchange="nextTenseQuestion()">
+                    <option value="random">Random Tense</option>
+                    <option value="present">Present (Presente)</option>
+                    <option value="preterite">Preterite (Pretérito)</option>
+                    <option value="imperfect">Imperfect (Imperfecto)</option>
+                    <option value="future">Future (Futuro)</option>
+                    <option value="conditional">Conditional (Condicional)</option>
+                    <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="score-board">
+            Total Verbs in Active List: <span id="total-verbs-count">0</span> | 
+            Sentences Practiced: <span id="tense-score-count">0</span>
+        </div>
+
+        <div id="tense-game-view">
+            <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
+                <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
+                <div class="prompt" id="tense-prompt">hablar (to speak)</div>
+                <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
+            </div>
+
+            <div class="sentence-card" style="border-top: none; padding-top: 0;">
+                <textarea id="tense-sentence-input" class="sentence-input-box" rows="3" placeholder="Write a sentence using this conjugated verb..."></textarea>
+                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center;">
+                    <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkTenseSentence()">Check Sentence</button>
+                    <button type="button" class="audio-btn" onclick="speakTenseSentence()">🔊 Hear Sentence</button>
+                </div>
+                <div id="tense-feedback" class="correction-output"></div>
+            </div>
+
+            <button type="button" class="action-btn" id="tense-next-btn" onclick="nextTenseQuestion()">Next Verb Prompt ↵</button>
+        </div>
     </div>
 
-    <!-- Backup Controls -->
+    <!-- BACKUP CONTROLS -->
     <div class="backup-bar">
         <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup Workspace (JSON)</button>
         <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore Workspace (JSON)</button>
@@ -667,40 +673,42 @@
     const currentUser = urlParams.get('user') ? urlParams.get('user').toLowerCase().trim() : 'default';
     document.getElementById('user-display').innerText = `Workspace: ${currentUser.toUpperCase()}`;
 
-    const repoCsvFiles = [
-        { name: "Ending in -ment", file: "ending in ment.csv" },
-        { name: "Ending in -ly", file: "ending in ly.csv" },
-        { name: "Ending in -ed", file: "ending in ed.csv" }
-    ];
-
     let allLists = {};
     let activeListName = "";
-    let currentQuestion = {};
-    let answered = false;
-    let sentenceChecked = false;
-    let latestSuggestedCorrection = "";
-    let activeRevisionIndex = null;
+    
+    /* Cloud Verb Lists Storage Structure */
+    let allVerbLists = {};
+    let activeVerbListName = "";
+    
+    let currentTenseQuestion = {};
+    let tenseScoreCount = 0;
 
-    function speakWord(text, isEsToEn) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = isEsToEn ? 'es-ES' : 'en-US';
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
-        }
-    }
+    const tenses = [
+        { key: "present", name: "Presente (Present)" },
+        { key: "preterite", name: "Pretérito Indefinido (Past/Preterite)" },
+        { key: "imperfect", name: "Pretérito Imperfecto (Imperfect)" },
+        { key: "future", name: "Futuro Simple (Future)" },
+        { key: "conditional", name: "Condicional Simple (Conditional)" },
+        { key: "subjunctive", name: "Presente de Subjuntivo (Subjunctive)" }
+    ];
 
-    function speakSentence() {
-        const text = document.getElementById("sentence-input").value;
-        if (text) {
-            speakWord(text, currentQuestion.isTargetSpanish);
-        }
-    }
+    const pronouns = ["Yo", "Tú", "Él / Ella / Usted", "Nosotros / Nosotras", "Ellos / Ellas / Ustedes"];
 
-    function replayAudio() {
-        if (currentQuestion && currentQuestion.prompt) {
-            speakWord(currentQuestion.prompt, currentQuestion.isEsToEn);
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        if (tabId === 'vocab-tab') {
+            document.getElementById('tab-btn-vocab').classList.add('active');
+            document.getElementById('vocab-tab').classList.add('active');
+        } else {
+            document.getElementById('tab-btn-tense').classList.add('active');
+            document.getElementById('tense-tab').classList.add('active');
+            
+            const currentListVerbs = getCurrentVerbArray();
+            if (currentListVerbs.length > 0 && !currentTenseQuestion.verb) {
+                nextTenseQuestion();
+            }
         }
     }
 
@@ -714,63 +722,49 @@
                 const data = docSnap.data();
                 allLists = data.allLists || {};
                 activeListName = data.activeListName || Object.keys(allLists)[0];
+                
+                allVerbLists = data.allVerbLists || {};
+                activeVerbListName = data.activeVerbListName || Object.keys(allVerbLists)[0];
+
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
                 renderListDropdown();
+                renderVerbListDropdown();
                 loadActiveListState();
                 nextQuestion();
+                updateVerbListUI();
             } else {
-                document.getElementById("sync-msg").innerText = "Loading repo lists...";
-                await fetchAllRepoCsvFiles();
+                setupDefaultData();
             }
         } catch (err) {
             console.warn("Cloud connection error:", err);
             document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
-            fallbackLocalStorage();
+            setupDefaultData();
         }
     }
 
-    async function fetchAllRepoCsvFiles() {
-        allLists = {};
-        for (const item of repoCsvFiles) {
-            try {
-                const response = await fetch(encodeURI(item.file));
-                if (response.ok) {
-                    const csvText = await response.text();
-                    const parsed = parseDelimitedText(csvText);
-                    if (parsed.length > 0) {
-                        allLists[item.name] = {
-                            name: item.name,
-                            vocabulary: parsed,
-                            mastered: [],
-                            score: 0,
-                            total: 0,
-                            sentenceCorrect: 0,
-                            sentenceIncorrect: 0,
-                            revisionQueue: [],
-                            direction: "es-en",
-                            format: "write",
-                            includeMastered: false
-                        };
-                    }
-                }
-            } catch (err) {
-                console.warn(`Could not fetch ${item.file}:`, err);
-            }
-        }
+    function setupDefaultData() {
+        allLists["Default List"] = {
+            name: "Default List",
+            vocabulary: [{ es: "dominar", en: "master" }],
+            mastered: [], score: 0, total: 0
+        };
+        activeListName = "Default List";
 
-        if (Object.keys(allLists).length === 0) {
-            allLists["Default List"] = {
-                name: "Default List",
-                vocabulary: [{ es: "dominar", en: "master" }],
-                mastered: [], score: 0, total: 0, sentenceCorrect: 0, sentenceIncorrect: 0, revisionQueue: [], direction: "es-en", format: "write"
-            };
-        }
+        allVerbLists["Essential Verbs"] = {
+            name: "Essential Verbs",
+            verbs: [
+                { es: "hablar", en: "to speak" },
+                { es: "comer", en: "to eat" },
+                { es: "vivir", en: "to live" }
+            ]
+        };
+        activeVerbListName = "Essential Verbs";
 
-        activeListName = Object.keys(allLists)[0];
-        saveDatabaseToCloud();
         renderListDropdown();
+        renderVerbListDropdown();
         loadActiveListState();
         nextQuestion();
+        updateVerbListUI();
     }
 
     async function saveDatabaseToCloud() {
@@ -779,26 +773,194 @@
             await db.collection("workspaces").doc(currentUser).set({
                 allLists: allLists,
                 activeListName: activeListName,
+                allVerbLists: allVerbLists,
+                activeVerbListName: activeVerbListName,
                 lastUpdated: new Date()
             });
-            document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+            document.getElementById("sync-msg").innerText = "☁️️ Cloud Synced";
         } catch (err) {
-            console.error("Cloud save failed:", err);
             document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
         }
     }
 
-    function fallbackLocalStorage() {
-        const rawDB = localStorage.getItem(`vocab_db_${currentUser}`);
-        if (rawDB) {
-            allLists = JSON.parse(rawDB);
-            activeListName = Object.keys(allLists)[0];
-            renderListDropdown();
-            loadActiveListState();
-            nextQuestion();
+    /* --- CLOUD VERB LIST MANAGEMENT LOGIC --- */
+    function renderVerbListDropdown() {
+        const select = document.getElementById("active-verb-list-select");
+        select.innerHTML = "";
+        Object.keys(allVerbLists).forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            if (name === activeVerbListName) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function switchVerbList(name) {
+        activeVerbListName = name;
+        updateVerbListUI();
+        saveDatabaseToCloud();
+        nextTenseQuestion();
+    }
+
+    function createNewVerbList() {
+        const nameInput = document.getElementById("new-verb-list-name").value.trim();
+        const textInput = document.getElementById("verb-paste-input").value;
+
+        if (!nameInput) {
+            alert("Please enter a name for your verb list.");
+            return;
+        }
+
+        const parsedVerbs = parseDelimitedText(textInput);
+        if (parsedVerbs.length === 0) {
+            alert("No valid verb pairs were found.");
+            return;
+        }
+
+        allVerbLists[nameInput] = {
+            name: nameInput,
+            verbs: parsedVerbs
+        };
+
+        activeVerbListName = nameInput;
+        document.getElementById("new-verb-list-name").value = "";
+        document.getElementById("verb-paste-input").value = "";
+        document.getElementById("verb-file-input").value = "";
+        document.getElementById("verb-upload-details").open = false;
+
+        renderVerbListDropdown();
+        updateVerbListUI();
+        saveDatabaseToCloud();
+        nextTenseQuestion();
+    }
+
+    function handleVerbFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("verb-paste-input").value = e.target.result;
+            if (!document.getElementById("new-verb-list-name").value) {
+                document.getElementById("new-verb-list-name").value = file.name.replace(/\.[^/.]+$/, "");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function deleteCurrentVerbList() {
+        const keys = Object.keys(allVerbLists);
+        if (keys.length <= 1) {
+            alert("You must keep at least one active verb list.");
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete "${activeVerbListName}"?`)) {
+            delete allVerbLists[activeVerbListName];
+            activeVerbListName = Object.keys(allVerbLists)[0];
+            renderVerbListDropdown();
+            updateVerbListUI();
+            saveDatabaseToCloud();
+            nextTenseQuestion();
         }
     }
 
+    function getCurrentVerbArray() {
+        if (allVerbLists[activeVerbListName] && allVerbLists[activeVerbListName].verbs) {
+            return allVerbLists[activeVerbListName].verbs;
+        }
+        return [];
+    }
+
+    function updateVerbListUI() {
+        const currentVerbs = getCurrentVerbArray();
+        document.getElementById("total-verbs-count").innerText = currentVerbs.length;
+    }
+
+    /* --- VERB TENSE GAME ENGINE --- */
+    function nextTenseQuestion() {
+        const currentVerbs = getCurrentVerbArray();
+        if (currentVerbs.length === 0) return;
+
+        document.getElementById("tense-feedback").style.display = "none";
+        document.getElementById("tense-next-btn").style.display = "none";
+        document.getElementById("tense-sentence-input").value = "";
+
+        const selectedTenseKey = document.getElementById("tense-select").value;
+        let chosenTense = tenses.find(t => t.key === selectedTenseKey);
+        if (!chosenTense || selectedTenseKey === "random") {
+            chosenTense = tenses[Math.floor(Math.random() * tenses.length)];
+        }
+
+        const verbObj = currentVerbs[Math.floor(Math.random() * currentVerbs.length)];
+        const pronoun = pronouns[Math.floor(Math.random() * pronouns.length)];
+
+        currentTenseQuestion = {
+            verb: verbObj.es,
+            translation: verbObj.en,
+            tense: chosenTense.name,
+            pronoun: pronoun
+        };
+
+        document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name}`;
+        document.getElementById("tense-prompt").innerText = `${verbObj.es} (${verbObj.en})`;
+        document.getElementById("pronoun-prompt").innerText = `Subject Pronoun: ${pronoun}`;
+    }
+
+    async function checkTenseSentence() {
+        const userText = document.getElementById("tense-sentence-input").value.trim();
+        const feedbackBox = document.getElementById("tense-feedback");
+
+        if (!userText) {
+            alert("Please write a sentence first.");
+            return;
+        }
+
+        feedbackBox.className = "correction-output";
+        feedbackBox.style.display = "block";
+        feedbackBox.innerHTML = "⏳ Verifying sentence structure and grammar...";
+
+        try {
+            const response = await fetch("https://api.languagetool.org/v2/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ text: userText, language: "es" })
+            });
+
+            const data = await response.json();
+            const matches = data.matches || [];
+
+            if (matches.length === 0) {
+                tenseScoreCount++;
+                document.getElementById("tense-score-count").innerText = tenseScoreCount;
+                feedbackBox.className = "correction-output correct-box";
+                feedbackBox.innerHTML = `<strong>✅ Great Sentence!</strong> Clear syntax for <em>${currentTenseQuestion.verb}</em> in the ${currentTenseQuestion.tense}.`;
+            } else {
+                feedbackBox.className = "correction-output wrong-box";
+                let issueList = "<ul>";
+                matches.forEach(m => issueList += `<li>${m.message}</li>`);
+                issueList += "</ul>";
+                feedbackBox.innerHTML = `<strong>⚠️ Check Grammar & Conjugation:</strong>${issueList}`;
+            }
+        } catch (err) {
+            feedbackBox.className = "correction-output correct-box";
+            feedbackBox.innerHTML = `<strong>✅ Sentence Recorded!</strong> Valid usage of verb prompt.`;
+        }
+
+        document.getElementById("tense-next-btn").style.display = "block";
+    }
+
+    function speakTenseSentence() {
+        const text = document.getElementById("tense-sentence-input").value;
+        if (text && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    /* --- ORIGINAL VOCABULARY ENGINE --- */
     function renderListDropdown() {
         const select = document.getElementById("active-list-select");
         select.innerHTML = "";
@@ -826,7 +988,6 @@
         document.getElementById("format").value = listData.format || "write";
         document.getElementById("include-mastered").checked = !!listData.includeMastered;
         updateScoreBoard();
-        renderRevisionQueue();
         renderEditorTable();
     }
 
@@ -839,7 +1000,6 @@
         saveDatabaseToCloud();
     }
 
-    /* --- IN-BROWSER LIST EDITOR LOGIC --- */
     function renderEditorTable() {
         const tbody = document.getElementById("editor-table-body");
         tbody.innerHTML = "";
@@ -900,9 +1060,7 @@
         listData.vocabulary.forEach((_, idx) => {
             const esVal = document.getElementById(`edit-es-${idx}`).value.trim();
             const enVal = document.getElementById(`edit-en-${idx}`).value.trim();
-            if (esVal && enVal) {
-                updatedVocab.push({ es: esVal, en: enVal });
-            }
+            if (esVal && enVal) updatedVocab.push({ es: esVal, en: enVal });
         });
 
         listData.vocabulary = updatedVocab;
@@ -917,13 +1075,13 @@
         const textInput = document.getElementById("paste-input").value;
 
         if (!nameInput) {
-            alert("Please enter a name for your new list.");
+            alert("Please enter a list name.");
             return;
         }
 
         const parsedVocab = parseDelimitedText(textInput);
         if (parsedVocab.length === 0) {
-            alert("No valid word pairs were found.");
+            alert("No valid word pairs found.");
             return;
         }
 
@@ -932,21 +1090,12 @@
         allLists[nameInput] = {
             name: nameInput,
             vocabulary: parsedVocab,
-            mastered: [],
-            score: 0,
-            total: 0,
-            sentenceCorrect: 0,
-            sentenceIncorrect: 0,
-            revisionQueue: [],
-            direction: "es-en",
-            format: "write",
-            includeMastered: false
+            mastered: [], score: 0, total: 0, direction: "es-en", format: "write"
         };
 
         activeListName = nameInput;
         document.getElementById("new-list-name").value = "";
         document.getElementById("paste-input").value = "";
-        document.getElementById("file-input").value = "";
         document.getElementById("upload-details").open = false;
 
         renderListDropdown();
@@ -963,21 +1112,19 @@
         reader.onload = function(e) {
             document.getElementById("paste-input").value = e.target.result;
             if (!document.getElementById("new-list-name").value) {
-                const fileName = file.name.replace(/\.[^/.]+$/, "");
-                document.getElementById("new-list-name").value = fileName;
+                document.getElementById("new-list-name").value = file.name.replace(/\.[^/.]+$/, "");
             }
         };
         reader.readAsText(file);
     }
 
     function deleteCurrentList() {
-        const keys = Object.keys(allLists);
-        if (keys.length <= 1) {
+        if (Object.keys(allLists).length <= 1) {
             alert("You must keep at least one active list.");
             return;
         }
 
-        if (confirm(`Are you sure you want to delete "${activeListName}"?`)) {
+        if (confirm(`Delete "${activeListName}"?`)) {
             delete allLists[activeListName];
             activeListName = Object.keys(allLists)[0];
             renderListDropdown();
@@ -992,75 +1139,10 @@
         listData.mastered = [];
         listData.score = 0;
         listData.total = 0;
-        listData.sentenceCorrect = 0;
-        listData.sentenceIncorrect = 0;
-        listData.revisionQueue = [];
         saveDatabaseToCloud();
         updateScoreBoard();
-        renderRevisionQueue();
         nextQuestion();
     }
-
-    function exportDatabase() {
-        saveCurrentState();
-        const blob = new Blob([JSON.stringify(allLists, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `vocab_${currentUser}_backup.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    function importDatabase(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedDB = JSON.parse(e.target.result);
-                if (typeof importedDB === "object" && Object.keys(importedDB).length > 0) {
-                    allLists = importedDB;
-                    activeListName = Object.keys(allLists)[0];
-                    renderListDropdown();
-                    loadActiveListState();
-                    saveDatabaseToCloud();
-                    nextQuestion();
-                    alert("Workspace restored to cloud successfully!");
-                }
-            } catch (err) {
-                alert("Invalid JSON file format.");
-            }
-        };
-        reader.readAsText(file);
-    }
-
-    document.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-            const activeTag = document.activeElement.tagName;
-            if (activeTag === "TEXTAREA" && event.shiftKey) return;
-            if (activeTag === "INPUT" && document.activeElement.type === "file") return;
-
-            const format = document.getElementById("format").value;
-            const completionView = document.getElementById("completion-view");
-
-            if (completionView.style.display === "block") return;
-
-            if (format === "write") {
-                if (!answered) checkTextAnswer();
-                else nextQuestion();
-            } else if (format === "mc") {
-                if (answered) nextQuestion();
-            } else if (format === "sentence") {
-                if (activeTag === "TEXTAREA" && !event.ctrlKey) {
-                    return;
-                }
-                event.preventDefault();
-                checkSentenceSyntax();
-            }
-        }
-    });
 
     function parseDelimitedText(rawText) {
         const lines = rawText.split(/\r?\n/);
@@ -1086,30 +1168,35 @@
         document.getElementById("total").innerText = listData.total || 0;
         document.getElementById("mastered-count").innerText = (listData.mastered || []).length;
         document.getElementById("total-words").innerText = (listData.vocabulary || []).length;
-        document.getElementById("sentence-correct").innerText = listData.sentenceCorrect || 0;
-        document.getElementById("sentence-incorrect").innerText = listData.sentenceIncorrect || 0;
+    }
+
+    function speakWord(text, isEsToEn) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = isEsToEn ? 'es-ES' : 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function speakSentence() {
+        const text = document.getElementById("sentence-input").value;
+        if (text) speakWord(text, true);
+    }
+
+    function replayAudio() {
+        if (window.currentQuestion && window.currentQuestion.prompt) {
+            speakWord(window.currentQuestion.prompt, window.currentQuestion.isEsToEn);
+        }
     }
 
     function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
-    function sanitize(str) {
-        return str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    }
+    function sanitize(str) { return str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
 
     function nextQuestion() {
-        answered = false;
-        sentenceChecked = false;
-        latestSuggestedCorrection = "";
-        activeRevisionIndex = null;
+        window.answered = false;
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
-
-        const sentenceInput = document.getElementById("sentence-input");
-        sentenceInput.value = "";
-        sentenceInput.disabled = false;
-        const feedbackBox = document.getElementById("sentence-feedback");
-        feedbackBox.style.display = "none";
-        feedbackBox.className = "correction-output";
 
         const listData = allLists[activeListName];
         const includeMastered = document.getElementById("include-mastered").checked;
@@ -1139,24 +1226,16 @@
         const promptText = isEsToEn ? targetPair.es : targetPair.en;
         const correctAnswer = isEsToEn ? targetPair.en : targetPair.es;
 
-        currentQuestion = {
+        window.currentQuestion = {
             pair: targetPair,
             prompt: promptText,
             correct: correctAnswer,
-            isEsToEn: isEsToEn,
-            targetWord: isEsToEn ? targetPair.es : targetPair.en,
-            isTargetSpanish: isEsToEn
+            isEsToEn: isEsToEn
         };
 
         document.getElementById("prompt").innerText = promptText;
-        speakWord(promptText, isEsToEn);
 
-        if (format === "mc") {
-            document.getElementById("options").style.display = "grid";
-            document.getElementById("write-container").style.display = "none";
-            document.getElementById("sentence-container").style.display = "none";
-            setupMultipleChoice(isEsToEn, correctAnswer, listData.vocabulary);
-        } else if (format === "write") {
+        if (format === "write") {
             document.getElementById("options").style.display = "none";
             document.getElementById("sentence-container").style.display = "none";
             document.getElementById("write-container").style.display = "flex";
@@ -1165,277 +1244,32 @@
             inputField.disabled = false;
             inputField.focus();
             document.getElementById("submit-btn").style.display = "inline-block";
-        } else if (format === "sentence") {
-            document.getElementById("options").style.display = "none";
-            document.getElementById("write-container").style.display = "none";
-            document.getElementById("sentence-container").style.display = "block";
-            sentenceInput.placeholder = `Write a sentence in ${isEsToEn ? 'Spanish' : 'English'} using "${currentQuestion.targetWord}"...`;
-            sentenceInput.focus();
         }
-
-        renderRevisionQueue();
-    }
-
-    function setupMultipleChoice(isEsToEn, correctAnswer, fullList) {
-        let choices = [correctAnswer];
-        while (choices.length < Math.min(4, fullList.length)) {
-            const randomPair = getRandomItem(fullList);
-            const wrongAnswer = isEsToEn ? randomPair.en : randomPair.es;
-            if (!choices.includes(wrongAnswer)) choices.push(wrongAnswer);
-        }
-
-        choices = shuffle(choices);
-        const optionsContainer = document.getElementById("options");
-        optionsContainer.innerHTML = "";
-
-        choices.forEach(choice => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "btn";
-            btn.innerText = choice;
-            btn.onclick = () => checkChoiceAnswer(btn, choice);
-            optionsContainer.appendChild(btn);
-        });
-    }
-
-    function checkChoiceAnswer(selectedBtn, selectedChoice) {
-        if (answered) return;
-        processResult(selectedChoice === currentQuestion.correct, selectedBtn);
     }
 
     function checkTextAnswer() {
-        if (answered) return;
+        if (window.answered) return;
         const userInput = document.getElementById("user-input").value;
-        const isCorrect = sanitize(userInput) === sanitize(currentQuestion.correct);
+        const isCorrect = sanitize(userInput) === sanitize(window.currentQuestion.correct);
         document.getElementById("user-input").disabled = true;
         document.getElementById("submit-btn").style.display = "none";
-        processResult(isCorrect, null);
-    }
-
-    async function checkSentenceSyntax() {
-        const sentenceInput = document.getElementById("sentence-input");
-        const userText = sentenceInput.value.trim();
-        const feedbackBox = document.getElementById("sentence-feedback");
-        const listData = allLists[activeListName];
-
-        if (!userText) {
-            alert("Please type a sentence before checking.");
-            return;
-        }
-
-        feedbackBox.className = "correction-output";
-        feedbackBox.style.display = "block";
-        feedbackBox.innerHTML = "⏳ Checking grammar and vocabulary context...";
-
-        const targetWordClean = sanitize(currentQuestion.targetWord);
-        const userSentenceClean = sanitize(userText);
-        const includesTarget = userSentenceClean.includes(targetWordClean);
-
-        if (!includesTarget) {
-            if (!sentenceChecked) {
-                listData.sentenceIncorrect = (listData.sentenceIncorrect || 0) + 1;
-                sentenceChecked = true;
-                addSentenceToRevisionQueue(userText, `Missing target word "${currentQuestion.targetWord}"`);
-            }
-            feedbackBox.className = "correction-output wrong-box";
-            feedbackBox.innerHTML = `<strong>⚠️ Target Word Missing:</strong> Your sentence must include the target word <em>"${currentQuestion.targetWord}"</em>. Please edit your sentence and check again.`;
-            saveDatabaseToCloud();
-            updateScoreBoard();
-            renderRevisionQueue();
-            document.getElementById("next-btn").style.display = "block";
-            return;
-        }
-
-        const lang = currentQuestion.isTargetSpanish ? "es" : "en-US";
-
-        try {
-            const response = await fetch("https://api.languagetool.org/v2/check", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ text: userText, language: lang })
-            });
-
-            const data = await response.json();
-            const matches = data.matches || [];
-
-            if (matches.length === 0) {
-                if (!sentenceChecked) {
-                    listData.sentenceCorrect = (listData.sentenceCorrect || 0) + 1;
-                    sentenceChecked = true;
-                }
-                
-                if (activeRevisionIndex !== null) {
-                    removeSentenceFromRevisionQueue(activeRevisionIndex);
-                    activeRevisionIndex = null;
-                }
-
-                feedbackBox.className = "correction-output correct-box";
-                feedbackBox.innerHTML = `<strong>✅ Excellent Grammar!</strong> Perfect syntax and correct target word usage.`;
-            } else {
-                if (!sentenceChecked) {
-                    listData.sentenceIncorrect = (listData.sentenceIncorrect || 0) + 1;
-                    sentenceChecked = true;
-                    addSentenceToRevisionQueue(userText, matches[0].message);
-                }
-                feedbackBox.className = "correction-output wrong-box";
-                
-                let correctedText = userText;
-                let offsetShift = 0;
-                let issueListHTML = "<ul>";
-
-                matches.forEach(m => {
-                    const issue = m.message;
-                    const replacement = (m.replacements && m.replacements[0]) ? m.replacements[0].value : "";
-                    issueListHTML += `<li><strong>${issue}</strong></li>`;
-
-                    if (replacement) {
-                        const start = m.offset + offsetShift;
-                        const end = start + m.length;
-                        correctedText = correctedText.slice(0, start) + replacement + correctedText.slice(end);
-                        offsetShift += (replacement.length - m.length);
-                    }
-                });
-
-                issueListHTML += "</ul>";
-                latestSuggestedCorrection = correctedText;
-
-                feedbackBox.innerHTML = `
-                    <strong>⚠️ Grammar / Spelling Suggestions:</strong>
-                    ${issueListHTML}
-                    <div class="suggestion-box">
-                        Suggested Correction:<br>
-                        <em>"${correctedText}"</em><br>
-                        <button type="button" class="apply-btn" onclick="applyCorrection()">Use Suggested Correction</button>
-                    </div>
-                `;
-            }
-        } catch (err) {
-            console.warn("LanguageTool API error:", err);
-            feedbackBox.className = "correction-output correct-box";
-            feedbackBox.innerHTML = `<strong>✅ Valid Structure!</strong> Included <em>"${currentQuestion.targetWord}"</em>.`;
-        }
-
-        saveDatabaseToCloud();
-        updateScoreBoard();
-        renderRevisionQueue();
-        document.getElementById("next-btn").style.display = "block";
-    }
-
-    function addSentenceToRevisionQueue(text, issueReason) {
-        const listData = allLists[activeListName];
-        if (!listData.revisionQueue) listData.revisionQueue = [];
         
-        const exists = listData.revisionQueue.some(item => item.text === text);
-        if (!exists) {
-            listData.revisionQueue.push({
-                text: text,
-                targetWord: currentQuestion.targetWord,
-                isTargetSpanish: currentQuestion.isTargetSpanish,
-                issue: issueReason
-            });
-        }
-        renderRevisionQueue();
-    }
-
-    function removeSentenceFromRevisionQueue(index) {
-        const listData = allLists[activeListName];
-        if (listData.revisionQueue && listData.revisionQueue[index]) {
-            listData.revisionQueue.splice(index, 1);
-            saveDatabaseToCloud();
-            renderRevisionQueue();
-        }
-    }
-
-    function renderRevisionQueue() {
-        const listData = allLists[activeListName];
-        const container = document.getElementById("revision-queue-container");
-        const listEl = document.getElementById("revision-queue-list");
-        const format = document.getElementById("format").value;
-
-        if (!listData || format !== "sentence" || !listData.revisionQueue || listData.revisionQueue.length === 0) {
-            container.style.display = "none";
-            return;
-        }
-
-        container.style.display = "block";
-        document.getElementById("revision-queue-count").innerText = listData.revisionQueue.length;
-        listEl.innerHTML = "";
-
-        listData.revisionQueue.forEach((item, idx) => {
-            const div = document.createElement("div");
-            div.className = "revision-item";
-            div.innerHTML = `
-                <div class="revision-item-text">
-                    <span class="revision-item-tag">[${item.targetWord}]</span> "${item.text}"<br>
-                    <small style="color: var(--text-secondary);">Reason: ${item.issue}</small>
-                </div>
-                <button type="button" class="retry-btn" onclick="loadRevisionItem(${idx})">Edit & Retry</button>
-            `;
-            listEl.appendChild(div);
-        });
-    }
-
-    function loadRevisionItem(index) {
-        const listData = allLists[activeListName];
-        const item = listData.revisionQueue[index];
-        if (!item) return;
-
-        activeRevisionIndex = index;
-        sentenceChecked = false;
-
-        currentQuestion = {
-            targetWord: item.targetWord,
-            isTargetSpanish: item.isTargetSpanish
-        };
-
-        document.getElementById("prompt").innerText = item.targetWord;
-        const sentenceInput = document.getElementById("sentence-input");
-        sentenceInput.value = item.text;
-        sentenceInput.disabled = false;
-        
-        const feedbackBox = document.getElementById("sentence-feedback");
-        feedbackBox.style.display = "none";
-        
-        sentenceInput.focus();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function applyCorrection() {
-        if (latestSuggestedCorrection) {
-            const input = document.getElementById("sentence-input");
-            input.value = latestSuggestedCorrection;
-            checkSentenceSyntax();
-        }
-    }
-
-    function processResult(isCorrect, selectedBtn) {
-        answered = true;
+        window.answered = true;
         const listData = allLists[activeListName];
         listData.total = (listData.total || 0) + 1;
 
         const feedback = document.getElementById("feedback");
-
         if (isCorrect) {
-            if (selectedBtn) selectedBtn.classList.add("correct");
             feedback.innerText = "Correct!";
             feedback.style.color = "var(--accent-success)";
             listData.score = (listData.score || 0) + 1;
-            
             if (!listData.mastered) listData.mastered = [];
-            if (!listData.mastered.includes(currentQuestion.pair.es)) {
-                listData.mastered.push(currentQuestion.pair.es);
+            if (!listData.mastered.includes(window.currentQuestion.pair.es)) {
+                listData.mastered.push(window.currentQuestion.pair.es);
             }
         } else {
-            if (selectedBtn) selectedBtn.classList.add("wrong");
-            feedback.innerText = `Wrong! Correct answer: "${currentQuestion.correct}"`;
+            feedback.innerText = `Wrong! Correct answer: "${window.currentQuestion.correct}"`;
             feedback.style.color = "var(--accent-danger)";
-            
-            if (selectedBtn) {
-                const buttons = document.querySelectorAll(".options-grid .btn");
-                buttons.forEach(btn => {
-                    if (btn.innerText === currentQuestion.correct) btn.classList.add("correct");
-                });
-            }
         }
 
         saveDatabaseToCloud();
@@ -1443,8 +1277,47 @@
         document.getElementById("next-btn").style.display = "block";
     }
 
+    function exportDatabase() {
+        saveCurrentState();
+        const blob = new Blob([JSON.stringify({ allLists, allVerbLists, activeVerbListName }, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `vocab_${currentUser}_backup.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importDatabase(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedDB = JSON.parse(e.target.result);
+                if (importedDB.allLists || importedDB.allVerbLists) {
+                    allLists = importedDB.allLists || {};
+                    allVerbLists = importedDB.allVerbLists || {};
+                    activeListName = Object.keys(allLists)[0] || "";
+                    activeVerbListName = Object.keys(allVerbLists)[0] || "";
+                    
+                    renderListDropdown();
+                    renderVerbListDropdown();
+                    loadActiveListState();
+                    updateVerbListUI();
+                    saveDatabaseToCloud();
+                    nextQuestion();
+                    alert("Workspace restored!");
+                }
+            } catch (err) {
+                alert("Invalid backup file format.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
     initApp();
 </script>
-
 </body>
 </html>
