@@ -74,7 +74,6 @@
             font-weight: 500;
         }
 
-        /* TAB NAVIGATION BAR */
         .nav-tabs {
             display: flex;
             gap: 8px;
@@ -427,12 +426,6 @@
             color: #fca5a5;
         }
 
-        .sentence-score-board {
-            font-size: 12px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
         .tense-tag {
             background-color: rgba(99, 102, 241, 0.2);
             color: #a5b4fc;
@@ -455,10 +448,9 @@
     <div id="user-display" class="user-tag">Workspace: Default</div>
     <div id="sync-msg" class="sync-status">Connecting to Cloud...</div>
 
-    <!-- TAB NAVIGATION BAR -->
     <div class="nav-tabs">
         <button type="button" class="tab-btn active" id="tab-btn-vocab" onclick="switchTab('vocab-tab')">📚 Vocab Quiz</button>
-        <button type="button" class="tab-btn" id="tab-btn-tense" onclick="switchTab('tense-tab')">✍️️ Verb Tenses</button>
+        <button type="button" class="tab-btn" id="tab-btn-tense" onclick="switchTab('tense-tab')">✍️ Verb Tenses</button>
     </div>
 
     <!-- TAB 1: VOCABULARY QUIZ -->
@@ -578,9 +570,8 @@
         </div>
     </div>
 
-    <!-- TAB 2: VERB TENSE CONJUGATION & SENTENCE PRACTICE -->
+    <!-- TAB 2: VERB TENSE CONJUGATION PRACTICE -->
     <div id="tense-tab" class="tab-content">
-        <!-- Active Verb List Selector -->
         <div class="list-selector-bar">
             <label for="active-verb-list-select" style="font-weight: 600; color: var(--text-secondary);">Active Verb List:</label>
             <select id="active-verb-list-select" onchange="switchVerbList(this.value)"></select>
@@ -592,14 +583,14 @@
             <div class="upload-controls">
                 <div>
                     <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
-                    <input type="text" id="new-verb-list-name" placeholder="e.g. Regular -AR Verbs" style="width: 95%; margin-top: 4px;">
+                    <input type="text" id="new-verb-list-name" placeholder="e.g. Top 3 Verbs" style="width: 95%; margin-top: 4px;">
                 </div>
                 <div>
                     <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload Verb File (.csv / .txt):</label><br>
                     <input type="file" id="verb-file-input" accept=".txt,.csv" onchange="handleVerbFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
                 </div>
                 <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste 2-column list (Infinitive, English):</p>
-                <textarea id="verb-paste-input" placeholder="hablar, to speak&#10;comer, to eat&#10;vivir, to live&#10;escribir, to write"></textarea>
+                <textarea id="verb-paste-input" placeholder="hablar, talk&#10;comer, eat&#10;correr, run"></textarea>
                 <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewVerbList()">Save Verb List to Cloud</button>
             </div>
         </details>
@@ -627,7 +618,7 @@
         <div id="tense-game-view">
             <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
                 <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
-                <div class="prompt" id="tense-prompt">hablar (to speak)</div>
+                <div class="prompt" id="tense-prompt">hablar (talk)</div>
                 <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
             </div>
 
@@ -675,11 +666,8 @@
 
     let allLists = {};
     let activeListName = "";
-    
-    /* Cloud Verb Lists Storage Structure */
     let allVerbLists = {};
     let activeVerbListName = "";
-    
     let currentTenseQuestion = {};
     let tenseScoreCount = 0;
 
@@ -692,7 +680,13 @@
         { key: "subjunctive", name: "Presente de Subjuntivo (Subjunctive)" }
     ];
 
-    const pronouns = ["Yo", "Tú", "Él / Ella / Usted", "Nosotros / Nosotras", "Ellos / Ellas / Ustedes"];
+    const pronouns = [
+        { id: "yo", label: "Yo" },
+        { id: "tu", label: "Tú" },
+        { id: "el", label: "Él / Ella / Usted" },
+        { id: "nosotros", label: "Nosotros / Nosotras" },
+        { id: "ellos", label: "Ellos / Ellas / Ustedes" }
+    ];
 
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -704,7 +698,6 @@
         } else {
             document.getElementById('tab-btn-tense').classList.add('active');
             document.getElementById('tense-tab').classList.add('active');
-            
             const currentListVerbs = getCurrentVerbArray();
             if (currentListVerbs.length > 0 && !currentTenseQuestion.verb) {
                 nextTenseQuestion();
@@ -722,7 +715,6 @@
                 const data = docSnap.data();
                 allLists = data.allLists || {};
                 activeListName = data.activeListName || Object.keys(allLists)[0];
-                
                 allVerbLists = data.allVerbLists || {};
                 activeVerbListName = data.activeVerbListName || Object.keys(allVerbLists)[0];
 
@@ -750,15 +742,15 @@
         };
         activeListName = "Default List";
 
-        allVerbLists["Essential Verbs"] = {
-            name: "Essential Verbs",
+        allVerbLists["Top 3 Verbs"] = {
+            name: "Top 3 Verbs",
             verbs: [
-                { es: "hablar", en: "to speak" },
-                { es: "comer", en: "to eat" },
-                { es: "vivir", en: "to live" }
+                { es: "hablar", en: "talk" },
+                { es: "comer", en: "eat" },
+                { es: "correr", en: "run" }
             ]
         };
-        activeVerbListName = "Essential Verbs";
+        activeVerbListName = "Top 3 Verbs";
 
         renderListDropdown();
         renderVerbListDropdown();
@@ -777,13 +769,12 @@
                 activeVerbListName: activeVerbListName,
                 lastUpdated: new Date()
             });
-            document.getElementById("sync-msg").innerText = "☁️️ Cloud Synced";
+            document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
         } catch (err) {
             document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
         }
     }
 
-    /* --- CLOUD VERB LIST MANAGEMENT LOGIC --- */
     function renderVerbListDropdown() {
         const select = document.getElementById("active-verb-list-select");
         select.innerHTML = "";
@@ -818,11 +809,7 @@
             return;
         }
 
-        allVerbLists[nameInput] = {
-            name: nameInput,
-            verbs: parsedVerbs
-        };
-
+        allVerbLists[nameInput] = { name: nameInput, verbs: parsedVerbs };
         activeVerbListName = nameInput;
         document.getElementById("new-verb-list-name").value = "";
         document.getElementById("verb-paste-input").value = "";
@@ -878,7 +865,7 @@
         document.getElementById("total-verbs-count").innerText = currentVerbs.length;
     }
 
-    /* --- VERB TENSE GAME ENGINE --- */
+    /* --- ADVANCED TENSE VALIDATION RULES ENGINE --- */
     function nextTenseQuestion() {
         const currentVerbs = getCurrentVerbArray();
         if (currentVerbs.length === 0) return;
@@ -894,18 +881,88 @@
         }
 
         const verbObj = currentVerbs[Math.floor(Math.random() * currentVerbs.length)];
-        const pronoun = pronouns[Math.floor(Math.random() * pronouns.length)];
+        const pronounObj = pronouns[Math.floor(Math.random() * pronouns.length)];
 
         currentTenseQuestion = {
-            verb: verbObj.es,
+            verb: verbObj.es.trim().toLowerCase(),
             translation: verbObj.en,
-            tense: chosenTense.name,
-            pronoun: pronoun
+            tenseKey: chosenTense.key,
+            tenseName: chosenTense.name,
+            pronounId: pronounObj.id,
+            pronounLabel: pronounObj.label
         };
 
         document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name}`;
         document.getElementById("tense-prompt").innerText = `${verbObj.es} (${verbObj.en})`;
-        document.getElementById("pronoun-prompt").innerText = `Subject Pronoun: ${pronoun}`;
+        document.getElementById("pronoun-prompt").innerText = `Subject Pronoun: ${pronounObj.label}`;
+    }
+
+    function getExpectedConjugationPrefixes(infinitive, tenseKey, pronounId) {
+        const stem = infinitive.slice(0, -2);
+        const ending = infinitive.slice(-2); // ar, er, ir
+
+        // Regular endings table
+        const regularMap = {
+            present: {
+                yo: [stem + 'o'],
+                tu: [stem + (ending === 'ar' ? 'as' : 'es')],
+                el: [stem + (ending === 'ar' ? 'a' : 'e')],
+                nosotros: [stem + (ending === 'ar' ? 'amos' : ending === 'er' ? 'emos' : 'imos')],
+                ellos: [stem + (ending === 'ar' ? 'an' : 'en')]
+            },
+            preterite: {
+                yo: ending === 'ar' ? [stem + 'e', stem + 'é'] : [stem + 'i', stem + 'í'],
+                tu: ending === 'ar' ? [stem + 'aste'] : [stem + 'iste'],
+                el: ending === 'ar' ? [stem + 'o', stem + 'ó'] : [stem + 'io', stem + 'ió'],
+                nosotros: ending === 'ar' ? [stem + 'amos'] : [stem + 'imos'],
+                ellos: ending === 'ar' ? [stem + 'aron'] : [stem + 'ieron']
+            },
+            imperfect: {
+                yo: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
+                tu: ending === 'ar' ? [stem + 'abas'] : [stem + 'ias', stem + 'ías'],
+                el: ending === 'ar' ? [stem + 'aba'] : [stem + 'ia', stem + 'ía'],
+                nosotros: ending === 'ar' ? [stem + 'abamos', stem + 'ábamos'] : [stem + 'iamos', stem + 'íamos'],
+                ellos: ending === 'ar' ? [stem + 'aban'] : [stem + 'ian', stem + 'ían']
+            },
+            future: {
+                yo: [infinitive + 'e', infinitive + 'é'],
+                tu: [infinitive + 'as', infinitive + 'ás'],
+                el: [infinitive + 'a', infinitive + 'á'],
+                nosotros: [infinitive + 'emos'],
+                ellos: [infinitive + 'an', infinitive + 'án']
+            },
+            conditional: {
+                yo: [infinitive + 'ia', infinitive + 'ía'],
+                tu: [infinitive + 'ias', infinitive + 'ías'],
+                el: [infinitive + 'ia', infinitive + 'ía'],
+                nosotros: [infinitive + 'iamos', infinitive + 'íamos'],
+                ellos: [infinitive + 'ian', infinitive + 'ían']
+            },
+            subjunctive: {
+                yo: [stem + (ending === 'ar' ? 'e' : 'a')],
+                tu: [stem + (ending === 'ar' ? 'es' : 'as')],
+                el: [stem + (ending === 'ar' ? 'e' : 'a')],
+                nosotros: [stem + (ending === 'ar' ? 'emos' : 'amos')],
+                ellos: [stem + (ending === 'ar' ? 'en' : 'an')]
+            }
+        };
+
+        let result = (regularMap[tenseKey] && regularMap[tenseKey][pronounId]) ? regularMap[tenseKey][pronounId] : [];
+
+        // Common irregular verb stem overrides
+        if (infinitive === 'comer') {
+            if (tenseKey === 'preterite') {
+                if (pronounId === 'yo') result.push('comi', 'comí');
+                if (pronounId === 'el') result.push('comio', 'comió');
+            }
+        } else if (infinitive === 'hablar') {
+            if (tenseKey === 'preterite') {
+                if (pronounId === 'yo') result.push('hable', 'hablé');
+                if (pronounId === 'el') result.push('hablo', 'habló');
+            }
+        }
+
+        return result;
     }
 
     async function checkTenseSentence() {
@@ -919,8 +976,46 @@
 
         feedbackBox.className = "correction-output";
         feedbackBox.style.display = "block";
-        feedbackBox.innerHTML = "⏳ Verifying sentence structure and grammar...";
+        feedbackBox.innerHTML = "⏳ Validating verb conjugation and grammar...";
 
+        const sanitizeText = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cleanSentence = sanitizeText(userText);
+        const targetVerb = currentTenseQuestion.verb;
+        const targetTenseKey = currentTenseQuestion.tenseKey;
+        const targetPronounId = currentTenseQuestion.pronounId;
+
+        // 1. Tense Conjugation Verification
+        const expectedForms = getExpectedConjugationPrefixes(targetVerb, targetTenseKey, targetPronounId).map(f => sanitizeText(f));
+        const presentForms = getExpectedConjugationPrefixes(targetVerb, 'present', targetPronounId).map(f => sanitizeText(f));
+        const preteriteForms = getExpectedConjugationPrefixes(targetVerb, 'preterite', targetPronounId).map(f => sanitizeText(f));
+        const futureForms = getExpectedConjugationPrefixes(targetVerb, 'future', targetPronounId).map(f => sanitizeText(f));
+
+        const words = cleanSentence.split(/\s+/);
+        const containsTargetForm = words.some(word => expectedForms.includes(word));
+
+        if (!containsTargetForm) {
+            // Check if user accidentally used Present Tense instead of requested Future/Past
+            const containsPresentForm = words.some(word => presentForms.includes(word));
+            const containsPreteriteForm = words.some(word => preteriteForms.includes(word));
+            const containsFutureForm = words.some(word => futureForms.includes(word));
+
+            let explanation = `Your sentence does not contain the target verb <strong>"${targetVerb}"</strong> conjugated in <strong>${currentTenseQuestion.tenseName}</strong> for <strong>${currentTenseQuestion.pronounLabel}</strong>.`;
+            
+            if (targetTenseKey !== 'present' && containsPresentForm) {
+                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Present Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
+            } else if (targetTenseKey !== 'preterite' && containsPreteriteForm) {
+                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Preterite Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
+            } else if (targetTenseKey !== 'future' && containsFutureForm) {
+                explanation = `<strong>Incorrect Tense Used:</strong> You used the <em>Future Tense</em> form. The prompt requires <strong>${currentTenseQuestion.tenseName}</strong> (Expected form: <em>"${expectedForms[0]}"</em>).`;
+            }
+
+            feedbackBox.className = "correction-output wrong-box";
+            feedbackBox.innerHTML = `⚠️ <strong>Conjugation Error:</strong> ${explanation}`;
+            document.getElementById("tense-next-btn").style.display = "block";
+            return;
+        }
+
+        // 2. Syntax & Grammar Check via LanguageTool API
         try {
             const response = await fetch("https://api.languagetool.org/v2/check", {
                 method: "POST",
@@ -935,17 +1030,19 @@
                 tenseScoreCount++;
                 document.getElementById("tense-score-count").innerText = tenseScoreCount;
                 feedbackBox.className = "correction-output correct-box";
-                feedbackBox.innerHTML = `<strong>✅ Great Sentence!</strong> Clear syntax for <em>${currentTenseQuestion.verb}</em> in the ${currentTenseQuestion.tense}.`;
+                feedbackBox.innerHTML = `<strong>✅ Excellent!</strong> Correct conjugation (<em>"${expectedForms[0]}"</em>) and clean syntax.`;
             } else {
                 feedbackBox.className = "correction-output wrong-box";
                 let issueList = "<ul>";
                 matches.forEach(m => issueList += `<li>${m.message}</li>`);
                 issueList += "</ul>";
-                feedbackBox.innerHTML = `<strong>⚠️ Check Grammar & Conjugation:</strong>${issueList}`;
+                feedbackBox.innerHTML = `<strong>⚠️ Grammar Suggestions:</strong>${issueList}`;
             }
         } catch (err) {
+            tenseScoreCount++;
+            document.getElementById("tense-score-count").innerText = tenseScoreCount;
             feedbackBox.className = "correction-output correct-box";
-            feedbackBox.innerHTML = `<strong>✅ Sentence Recorded!</strong> Valid usage of verb prompt.`;
+            feedbackBox.innerHTML = `<strong>✅ Sentence Accepted!</strong> Correct verb conjugation detected.`;
         }
 
         document.getElementById("tense-next-btn").style.display = "block";
@@ -1191,7 +1288,6 @@
     }
 
     function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    function sanitize(str) { return str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
 
     function nextQuestion() {
         window.answered = false;
@@ -1250,6 +1346,7 @@
     function checkTextAnswer() {
         if (window.answered) return;
         const userInput = document.getElementById("user-input").value;
+        const sanitize = str => str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const isCorrect = sanitize(userInput) === sanitize(window.currentQuestion.correct);
         document.getElementById("user-input").disabled = true;
         document.getElementById("submit-btn").style.display = "none";
