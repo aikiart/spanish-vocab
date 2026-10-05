@@ -743,13 +743,26 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
+        // Reset feedback, next buttons, and inputs when switching tabs to prevent state overlap
+        document.getElementById("feedback").innerText = "";
+        document.getElementById("next-btn").style.display = "none";
+        document.getElementById("sentence-feedback").style.display = "none";
+        document.getElementById("sentence-feedback").innerText = "";
+        
+        document.getElementById("tense-feedback").style.display = "none";
+        document.getElementById("tense-feedback").innerText = "";
+        document.getElementById("tense-next-btn").style.display = "none";
+
         if (tabId === 'vocab-tab') {
             document.getElementById('tab-btn-vocab').classList.add('active');
             document.getElementById('vocab-tab').classList.add('active');
-        } else {
+            renderEditorTable();
+            updateScoreBoard();
+        } else if (tabId === 'tense-tab') {
             document.getElementById('tab-btn-tense').classList.add('active');
             document.getElementById('tense-tab').classList.add('active');
             renderVerbEditorTable();
+            updateVerbListUI();
             const currentListVerbs = getCurrentVerbArray();
             if (currentListVerbs.length > 0 && !currentTenseQuestion.verbEs) {
                 nextTenseQuestion();
