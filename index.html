@@ -558,7 +558,7 @@
 
             <div class="sentence-card" id="sentence-container" style="display: none;">
                 <h3>
-                    <span>✍️️ Use word in context:</span>
+                    <span>✍️ Use word in context:</span>
                     <span class="sentence-score-board">
                         Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
                     </span>
@@ -1607,4 +1607,156 @@
         if (isCorrect) {
             feedback.innerText = "Correct!";
             feedback.style.color = "var(--accent-success)";
-            listData.score = (listData.
+            listData.score = (listData.score || 0) + 1;
+            if (!listData.mastered) listData.mastered = [];
+            if (!listData.mastered.includes(window.currentQuestion.pair.es)) {
+                listData.mastered.push(window.currentQuestion.pair.es);
+            }
+        } else {
+            feedback.innerText = `Wrong! Correct answer: "${window.currentQuestion.correct}"`;
+            feedback.style.color = "var(--accent-danger)";
+        }
+
+        saveDatabaseToCloud();
+        updateScoreBoard();
+        document.getElementById("next-btn").style.display = "block";
+    }
+
+    async function checkSentenceSyntax() {
+        const userText = document.getElementById("sentence-input").value.trim();
+        const feedbackBox = document.getElementById("sentence-feedback");
+
+        if (!userText) {
+            alert("Please write a sentence first.");
+            return;
+        }
+
+        feedbackBox.className = "correction-output";
+        feedbackBox.style.display = "block";
+        feedbackBox.innerHTML = "⏳ Validating sentence syntax...";
+
+        const targetWord = window.currentQuestion.pair.es.toLowerCase();
+        const containsTarget = userText.toLowerCase().includes(targetWord);
+
+        if (!containsTarget) {
+            feedbackBox.className = "correction-output wrong-box";
+            feedbackBox.innerHTML = `⚠️ <strong>Missing Word:</strong> Your sentence must include the word <em>"${targetWord}"</em>.`;
+            return;
+        }
+
+        try {
+            const response = await fetch("https://api.languagetool.org/v2/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ text: userText, language: "es" })
+            });
+
+            const data = await response.json();
+            const matches = data.matches || [];
+
+            if (matches.length === 0) {
+                sentenceCorrectCount++;
+                document.getElementById("sentence-correct").innerText = sentenceCorrectCount;
+                feedbackBox.className = "correction-output correct-box";
+                feedbackBox.innerHTML = "<strong>✅ Excellent!</strong> Clean Spanish sentence structure.";
+            } else {
+                sentenceIncorrectCount++;
+                document.getElementById("sentence-incorrect").innerText = sentenceIncorrectCount;
+                feedbackBox.className = "correction-output wrong-box";
+                let issueList = "<ul>";
+                matches.forEach(m => issueList += `<li>${m.message}</li>`);
+                issueList += "</ul>";
+                feedbackBox.innerHTML = `<strong>⚠️ Suggestions:</strong>${issueList}`;
+            }
+        } catch (err) {
+            sentenceCorrectCount++;
+            document.getElementById("sentence-correct").innerText = sentenceCorrectCount;
+            feedbackBox.className = "correction-output correct-box";
+            feedbackBox.innerHTML = "<strong>✅ Accepted!</strong> Valid sentence structure.";
+        }
+    }
+
+    function exportDatabase() {
+        saveCurrentState();
+        const blob = new Blob([JSON.stringify({ allLists, allVerbLists, activeVerbListName }, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `vocab_${currentUser}_backup.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importDatabase(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedDB = JSON.parse(e.target.result);
+                if (importedDB.allLists || importedDB.allVerbLists) {
+                    allLists = importedDB.allLists || {};
+                    allVerbLists = importedDB.allVerbLists || {};
+                    activeListName = Object.keys(allLists)[0] || "";
+                    activeVerbListName = Object.keys(allVerbLists)[0] || "";
+                    
+                    renderListDropdown();
+                    renderVerbListDropdown();
+                    loadActiveListState();
+                    renderVerbEditorTable();
+                    updateVerbListUI();
+                    saveDatabaseToCloud();
+                    nextQuestion();
+                    alert("Workspace restored!");
+                }
+            } catch (err) {
+                alert("Invalid backup file format.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    async function initApp() {
+        document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
+        
+        // 5-second connection timeout safeguard
+        const timeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Firebase connection timeout")), 5000)
+        );
+
+        try {
+            const docRef = db.collection("workspaces").doc(currentUser);
+            
+            // Race the Firestore query against the 5-second timer
+            const docSnap = await Promise.race([docRef.get(), timeout]);
+
+            if (docSnap.exists) {
+                const data = docSnap.data();
+                allLists = data.allLists || {};
+                activeListName = data.activeListName || Object.keys(allLists)[0];
+                allVerbLists = data.allVerbLists || {};
+                activeVerbListName = data.activeVerbListName || Object.keys(allVerbLists)[0];
+
+                document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+                renderListDropdown();
+                renderVerbListDropdown();
+                loadActiveListState();
+                renderVerbEditorTable();
+                nextQuestion();
+                updateVerbListUI();
+            } else {
+                setupDefaultData();
+            }
+        } catch (err) {
+            console.warn("Cloud connection error/timeout:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
+            setupDefaultData();
+        }
+    }
+
+    // Execute application startup
+    initApp();
+</script>
+</body>
+</html>
