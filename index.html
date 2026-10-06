@@ -1666,7 +1666,7 @@
                 let issueList = "<ul>";
                 matches.forEach(m => issueList += `<li>${m.message}</li>`);
                 issueList += "</ul>";
-                feedbackBox.innerHTML = `<strong>⚠️ Suggestions:</strong>${issueList}`;
+                feedbackBox.innerHTML = `<strong>⚠️️ Suggestions:</strong>${issueList}`;
             }
         } catch (err) {
             sentenceCorrectCount++;
@@ -1717,9 +1717,47 @@
         reader.readAsText(file);
     }
 
+    function setupEventListeners() {
+        const userInput = document.getElementById("user-input");
+        if (userInput) {
+            userInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!window.answered) {
+                        checkTextAnswer();
+                    } else {
+                        nextQuestion();
+                    }
+                }
+            });
+        }
+
+        const sentenceInput = document.getElementById("sentence-input");
+        if (sentenceInput) {
+            sentenceInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    checkSentenceSyntax();
+                }
+            });
+        }
+
+        const tenseSentenceInput = document.getElementById("tense-sentence-input");
+        if (tenseSentenceInput) {
+            tenseSentenceInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    checkTenseSentence();
+                }
+            });
+        }
+    }
+
     async function initApp() {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         
+        setupEventListeners();
+
         // 5-second connection timeout safeguard
         const timeout = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("Firebase connection timeout")), 5000)
