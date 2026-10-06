@@ -553,7 +553,7 @@
 
             <div class="write-input-container" id="write-container">
                 <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
-                <button type="button" class="action-btn" id="submit-btn" onclick="handleSubmitButtonClick()">Submit</button>
+                <button type="button" class="action-btn" id="submit-btn" onclick="handleWriteSubmit()">Submit</button>
             </div>
 
             <div class="sentence-card" id="sentence-container" style="display: none;">
@@ -590,12 +590,10 @@
             <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
         </div>
 
-        <!-- TOP INSTRUCTION BANNER -->
         <div class="instruction-banner">
             💡 <strong>Instruction:</strong> Please upload a list of infinitive verbs in 2 columns, spanish-english, do this as a csv file or paste it.
         </div>
 
-        <!-- EDIT ACTIVE VERB LIST SECTION -->
         <details class="upload-section" id="verb-editor-details">
             <summary>✏️ Edit Active Verb List (Verbs & Translations)</summary>
             <div class="upload-controls">
@@ -620,7 +618,6 @@
             </div>
         </details>
 
-        <!-- CREATE NEW VERB LIST SECTION -->
         <details class="upload-section" id="verb-upload-details">
             <summary>➕ Import & Save New Verb List to Cloud</summary>
             <div class="upload-controls">
@@ -686,7 +683,6 @@
         </div>
     </div>
 
-    <!-- BACKUP CONTROLS -->
     <div class="backup-bar">
         <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup Workspace (JSON)</button>
         <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore Workspace (JSON)</button>
@@ -694,7 +690,6 @@
     </div>
 </div>
 
-<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
@@ -745,7 +740,6 @@
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        // Reset feedback, next buttons, and inputs when switching tabs to prevent state overlap
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
         document.getElementById("sentence-feedback").style.display = "none";
@@ -977,7 +971,6 @@
         document.getElementById("total-verbs-count").innerText = currentVerbs.length;
     }
 
-    /* --- DUAL-DIRECTION TENSE QUESTION ENGINE --- */
     function nextTenseQuestion() {
         const currentVerbs = getCurrentVerbArray();
         if (currentVerbs.length === 0) return;
@@ -1025,11 +1018,9 @@
             `Type an English sentence using "${verbObj.en}" in the ${chosenTense.name} tense...`;
     }
 
-    /* --- COMPREHENSIVE GRAMMAR & IRREGULAR CONJUGATION ENGINE --- */
     function getSpanishForms(infinitive, tenseKey, pronounId) {
         const inf = infinitive.trim().toLowerCase();
         
-        // Irregular verb lookup table
         const irregulars = {
             ir: {
                 present: { yo: ['voy'], tu: ['vas'], el: ['va'], nosotros: ['vamos'], ellos: ['van'] },
@@ -1142,8 +1133,6 @@
         if (targetLang === 'es') {
             const verbEs = currentTenseQuestion.verbEs;
             const validForms = getSpanishForms(verbEs, tenseKey, pronounObj.id).map(f => stripAccents(f));
-            
-            // Allow either conjugated forms OR infinitive usage when accompanied by auxiliary verbs
             const containsVerbForm = cleanTokens.some(token => validForms.includes(token) || token === stripAccents(verbEs));
 
             if (!containsVerbForm) {
@@ -1157,10 +1146,7 @@
             const allowedPronouns = pronounObj.enMatches;
             const cleanText = stripAccents(userText.toLowerCase());
 
-            // Check if user provided an explicit English pronoun or started with a valid Spanish subject sentence
             const hasEnglishPronoun = cleanTokens.some(token => allowedPronouns.includes(token));
-            
-            // Allow infinitive phrasing ("to help") alongside subject/conjugated clauses
             const hasInfinitiveOrVerb = cleanTokens.includes(stripAccents(verbEn)) || cleanText.includes(`to ${stripAccents(verbEn)}`);
 
             if (!hasEnglishPronoun && !hasInfinitiveOrVerb) {
@@ -1222,7 +1208,6 @@
         }
     }
 
-    /* --- ORIGINAL VOCABULARY ENGINE --- */
     function renderListDropdown() {
         const select = document.getElementById("active-list-select");
         select.innerHTML = "";
@@ -1464,7 +1449,6 @@
             .map(pair => isEsToEn ? pair.en : pair.es)
             .filter(answer => answer !== correctAnswer);
 
-        // Shuffle and pick 3 distractors
         const shuffledDistractors = distractorPool.sort(() => 0.5 - Math.random());
         for (let i = 0; i < Math.min(3, shuffledDistractors.length); i++) {
             if (!choices.includes(shuffledDistractors[i])) {
@@ -1472,7 +1456,6 @@
             }
         }
 
-        // Fillers if pool has fewer than 4 items
         const fillers = ["N/A", "None", "Other", "Unknown"];
         let fillerIdx = 0;
         while (choices.length < 4) {
@@ -1527,18 +1510,15 @@
         document.getElementById("next-btn").style.display = "block";
     }
 
-    function handleSubmitButtonClick() {
-        if (!window.answered) {
-            checkTextAnswer();
-        } else {
-            nextQuestion();
-        }
-    }
-
     function nextQuestion() {
         window.answered = false;
         document.getElementById("feedback").innerText = "";
         document.getElementById("next-btn").style.display = "none";
+
+        const submitBtn = document.getElementById("submit-btn");
+        if (submitBtn) {
+            submitBtn.innerText = "Submit";
+        }
 
         const listData = allLists[activeListName];
         const includeMastered = document.getElementById("include-mastered").checked;
@@ -1583,12 +1563,8 @@
             document.getElementById("write-container").style.display = "flex";
             const inputField = document.getElementById("user-input");
             inputField.value = "";
-            inputField.disabled = false;
+            inputField.readOnly = false;
             inputField.focus();
-
-            const submitBtn = document.getElementById("submit-btn");
-            submitBtn.innerText = "Submit";
-            submitBtn.style.display = "inline-block";
         } else if (format === "mc") {
             document.getElementById("write-container").style.display = "none";
             document.getElementById("sentence-container").style.display = "none";
@@ -1602,18 +1578,28 @@
         }
     }
 
+    function handleWriteSubmit() {
+        if (!window.answered) {
+            checkTextAnswer();
+        } else {
+            nextQuestion();
+        }
+    }
+
     function checkTextAnswer() {
         if (window.answered) return;
-        const userInput = document.getElementById("user-input").value;
+        const inputField = document.getElementById("user-input");
+        const userInput = inputField.value;
         const sanitize = str => str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const isCorrect = sanitize(userInput) === sanitize(window.currentQuestion.correct);
         
-        const inputField = document.getElementById("user-input");
-        inputField.disabled = true;
+        inputField.readOnly = true;
         
         const submitBtn = document.getElementById("submit-btn");
-        submitBtn.innerText = "Next Word ↵";
-
+        if (submitBtn) {
+            submitBtn.innerText = "Next Word ↵";
+        }
+        
         window.answered = true;
         const listData = allLists[activeListName];
         listData.total = (listData.total || 0) + 1;
@@ -1732,56 +1718,34 @@
         reader.readAsText(file);
     }
 
-    function setupEventListeners() {
-        const userInput = document.getElementById("user-input");
-        if (userInput) {
-            userInput.addEventListener("keydown", function(e) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (!window.answered) {
-                        checkTextAnswer();
-                    } else {
-                        nextQuestion();
-                    }
-                }
-            });
-        }
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (!activeTab || activeTab.id !== 'vocab-tab') return;
 
-        const sentenceInput = document.getElementById("sentence-input");
-        if (sentenceInput) {
-            sentenceInput.addEventListener("keydown", function(e) {
-                if (e.key === "Enter" && !e.shiftKey) {
+            const format = document.getElementById("format").value;
+            
+            if (format === "write") {
+                e.preventDefault();
+                handleWriteSubmit();
+            } else if (format === "mc") {
+                if (window.answered) {
                     e.preventDefault();
-                    checkSentenceSyntax();
+                    nextQuestion();
                 }
-            });
+            }
         }
-
-        const tenseSentenceInput = document.getElementById("tense-sentence-input");
-        if (tenseSentenceInput) {
-            tenseSentenceInput.addEventListener("keydown", function(e) {
-                if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    checkTenseSentence();
-                }
-            });
-        }
-    }
+    });
 
     async function initApp() {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
-        
-        setupEventListeners();
 
-        // 5-second connection timeout safeguard
         const timeout = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("Firebase connection timeout")), 5000)
         );
 
         try {
             const docRef = db.collection("workspaces").doc(currentUser);
-            
-            // Race the Firestore query against the 5-second timer
             const docSnap = await Promise.race([docRef.get(), timeout]);
 
             if (docSnap.exists) {
@@ -1808,7 +1772,6 @@
         }
     }
 
-    // Execute application startup
     initApp();
 </script>
 </body>
