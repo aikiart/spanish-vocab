@@ -553,7 +553,7 @@
 
             <div class="write-input-container" id="write-container">
                 <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
-                <button type="button" class="action-btn" id="submit-btn" onclick="checkTextAnswer()">Submit</button>
+                <button type="button" class="action-btn" id="submit-btn" onclick="handleSubmitButtonClick()">Submit</button>
             </div>
 
             <div class="sentence-card" id="sentence-container" style="display: none;">
@@ -1104,7 +1104,7 @@
                 tu: [inf + 'ias', inf + 'ías'],
                 el: [inf + 'ia', inf + 'ía'],
                 nosotros: [inf + 'iamos', inf + 'íamos'],
-                ellos: [inf + 'ian', inf + 'ían']
+                ellos: [inf + 'ian', inf + 'íamos']
             },
             subjunctive: {
                 yo: [stem + (ending === 'ar' ? 'e' : 'a')],
@@ -1527,6 +1527,14 @@
         document.getElementById("next-btn").style.display = "block";
     }
 
+    function handleSubmitButtonClick() {
+        if (!window.answered) {
+            checkTextAnswer();
+        } else {
+            nextQuestion();
+        }
+    }
+
     function nextQuestion() {
         window.answered = false;
         document.getElementById("feedback").innerText = "";
@@ -1577,7 +1585,10 @@
             inputField.value = "";
             inputField.disabled = false;
             inputField.focus();
-            document.getElementById("submit-btn").style.display = "inline-block";
+
+            const submitBtn = document.getElementById("submit-btn");
+            submitBtn.innerText = "Submit";
+            submitBtn.style.display = "inline-block";
         } else if (format === "mc") {
             document.getElementById("write-container").style.display = "none";
             document.getElementById("sentence-container").style.display = "none";
@@ -1596,9 +1607,13 @@
         const userInput = document.getElementById("user-input").value;
         const sanitize = str => str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const isCorrect = sanitize(userInput) === sanitize(window.currentQuestion.correct);
-        document.getElementById("user-input").disabled = true;
-        document.getElementById("submit-btn").style.display = "none";
         
+        const inputField = document.getElementById("user-input");
+        inputField.disabled = true;
+        
+        const submitBtn = document.getElementById("submit-btn");
+        submitBtn.innerText = "Next Word ↵";
+
         window.answered = true;
         const listData = allLists[activeListName];
         listData.total = (listData.total || 0) + 1;
@@ -1666,7 +1681,7 @@
                 let issueList = "<ul>";
                 matches.forEach(m => issueList += `<li>${m.message}</li>`);
                 issueList += "</ul>";
-                feedbackBox.innerHTML = `<strong>⚠️️ Suggestions:</strong>${issueList}`;
+                feedbackBox.innerHTML = `<strong>⚠️ Suggestions:</strong>${issueList}`;
             }
         } catch (err) {
             sentenceCorrectCount++;
