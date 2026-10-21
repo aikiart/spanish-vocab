@@ -1688,35 +1688,58 @@
         URL.revokeObjectURL(url);
     }
 
-    function importDatabase(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    async function importDatabase(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedDB = JSON.parse(e.target.result);
-                if (importedDB.allLists || importedDB.allVerbLists) {
-                    allLists = importedDB.allLists || {};
-                    allVerbLists = importedDB.allVerbLists || {};
-                    activeListName = Object.keys(allLists)[0] || "";
-                    activeVerbListName = Object.keys(allVerbLists)[0] || "";
-                    
-                    renderListDropdown();
-                    renderVerbListDropdown();
-                    loadActiveListState();
-                    renderVerbEditorTable();
-                    updateVerbListUI();
-                    saveDatabaseToCloud();
-                    nextQuestion();
-                    alert("Workspace restored!");
-                }
-            } catch (err) {
-                alert("Invalid backup file format.");
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const importedDB = JSON.parse(e.target.result);
+
+            if (importedDB.allLists || importedDB.allVerbLists) {
+                // Update local memory
+                allLists = importedDB.allLists || {};
+                allVerbLists = importedDB.allVerbLists || {};
+                
+                // Preserve saved active list names or default to first keys
+                activeListName = importedDB.activeListName || Object.keys(allLists)[0] || "";
+                activeVerbListName = importedDB.activeVerbListName || Object.keys(allVerbLists)[0] || "";
+                
+                // Refresh UI components
+                renderListDropdown();
+                renderVerbListDropdown();
+                loadActiveListState();
+                renderVerbEditorTable();
+                updateVerbListUI();
+
+                // Force upload to Firestore and wait for completion
+                document.getElementById("sync-msg").innerText = "☁️ Uploading Restored Data...";
+                await db.collection("workspaces").doc(currentUser).set({
+                    allLists: allLists,
+                    activeListName: activeListName,
+                    allVerbLists: allVerbLists,
+                    activeVerbListName: activeVerbListName,
+                    lastUpdated: new Date()
+                });
+
+                document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+                nextQuestion();
+                alert("Workspace restored and synced to cloud successfully!");
+            } else {
+                alert("Invalid backup file structure.");
             }
-        };
-        reader.readAsText(file);
-    }
+        } catch (err) {
+            console.error("Database restore error:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
+            alert("Failed to restore to Cloud Firestore: " + err.message);
+        } finally {
+            // Reset file input so the same file can be uploaded again if needed
+            event.target.value = "";
+        }
+    };
+    reader.readAsText(file);
+}
 
     document.addEventListener("keydown", function(e) {
         if (e.key === "Enter") {
