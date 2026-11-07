@@ -113,7 +113,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
@@ -470,6 +470,7 @@
         <div class="list-selector-bar">
             <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
             <select id="active-list-select" onchange="switchList(this.value)"></select>
+            <button type="button" class="action-btn sm-btn" style="background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-primary);" id="sort-toggle-btn" onclick="toggleListSortDirection()">A-Z ⬆</button>
             <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
         </div>
 
@@ -712,6 +713,7 @@
 
     let allLists = {};
     let activeListName = "";
+    let sortDirection = "asc";
     let allVerbLists = {};
     let activeVerbListName = "";
     let currentTenseQuestion = {};
@@ -773,6 +775,7 @@
             mastered: [], score: 0, total: 0
         };
         activeListName = "Default List";
+        sortDirection = "asc";
 
         allVerbLists["Top 3 Verbs"] = {
             name: "Top 3 Verbs",
@@ -798,6 +801,7 @@
             await db.collection("workspaces").doc(currentUser).set({
                 allLists: allLists,
                 activeListName: activeListName,
+                sortDirection: sortDirection,
                 allVerbLists: allVerbLists,
                 activeVerbListName: activeVerbListName,
                 lastUpdated: new Date()
@@ -1010,7 +1014,7 @@
 
         const isSpanishTarget = targetLang === 'es';
         document.getElementById("target-tense-display").innerText = `Tense: ${chosenTense.name} (${isSpanishTarget ? 'Write in Spanish' : 'Write in English'})`;
-        document.getElementById("tense-prompt").innerText = isSpanishTarget ? `${verbObj.en} ➔${verbObj.es}` : `${verbObj.es} ➔${verbObj.en}`;
+        document.getElementById("tense-prompt").innerText = isSpanishTarget ? `${verbObj.en} ➔ ${verbObj.es}` : `${verbObj.es} ➔ ${verbObj.en}`;
         document.getElementById("pronoun-prompt").innerText = `Subject: ${isSpanishTarget ? pronounObj.esLabel : pronounObj.enLabel}`;
 
         sentenceInput.placeholder = isSpanishTarget ? 
@@ -1095,7 +1099,7 @@
                 tu: [inf + 'ias', inf + 'ías'],
                 el: [inf + 'ia', inf + 'ía'],
                 nosotros: [inf + 'iamos', inf + 'íamos'],
-                ellos: [inf + 'ian', inf + 'íamos']
+                ellos: [inf + 'ian', inf + 'ían']
             },
             subjunctive: {
                 yo: [stem + (ending === 'ar' ? 'e' : 'a')],
@@ -1208,16 +1212,56 @@
         }
     }
 
+    function parseListNameDate(name) {
+        const match = name.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+        if (match) {
+            let month = parseInt(match[1], 10) - 1;
+            let day = parseInt(match[2], 10);
+            let year = parseInt(match[3], 10);
+            if (year < 100) year += 2000;
+            return new Date(year, month, day).getTime();
+        }
+        return null;
+    }
+
     function renderListDropdown() {
         const select = document.getElementById("active-list-select");
         select.innerHTML = "";
-        Object.keys(allLists).forEach(name => {
+        
+        const listNames = Object.keys(allLists);
+
+        listNames.sort((a, b) => {
+            const dateA = parseListNameDate(a);
+            const dateB = parseListNameDate(b);
+
+            let comp = 0;
+            if (dateA !== null && dateB !== null) {
+                comp = dateA - dateB;
+            } else {
+                comp = a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            }
+
+            return sortDirection === "asc" ? comp : -comp;
+        });
+
+        listNames.forEach(name => {
             const opt = document.createElement("option");
             opt.value = name;
             opt.innerText = name;
             if (name === activeListName) opt.selected = true;
             select.appendChild(opt);
         });
+
+        const sortBtn = document.getElementById("sort-toggle-btn");
+        if (sortBtn) {
+            sortBtn.innerText = sortDirection === "asc" ? "A-Z ⬆" : "Z-A ⬇";
+        }
+    }
+
+    function toggleListSortDirection() {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+        renderListDropdown();
+        saveCurrentState();
     }
 
     function switchList(name) {
@@ -1679,7 +1723,7 @@
 
     function exportDatabase() {
         saveCurrentState();
-        const blob = new Blob([JSON.stringify({ allLists, allVerbLists, activeVerbListName }, null, 2)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify({ allLists, sortDirection, allVerbLists, activeVerbListName }, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -1689,57 +1733,54 @@
     }
 
     async function importDatabase(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+        const file = event.target.files[0];
+        if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const importedDB = JSON.parse(e.target.result);
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const importedDB = JSON.parse(e.target.result);
 
-            if (importedDB.allLists || importedDB.allVerbLists) {
-                // Update local memory
-                allLists = importedDB.allLists || {};
-                allVerbLists = importedDB.allVerbLists || {};
-                
-                // Preserve saved active list names or default to first keys
-                activeListName = importedDB.activeListName || Object.keys(allLists)[0] || "";
-                activeVerbListName = importedDB.activeVerbListName || Object.keys(allVerbLists)[0] || "";
-                
-                // Refresh UI components
-                renderListDropdown();
-                renderVerbListDropdown();
-                loadActiveListState();
-                renderVerbEditorTable();
-                updateVerbListUI();
+                if (importedDB.allLists || importedDB.allVerbLists) {
+                    allLists = importedDB.allLists || {};
+                    sortDirection = importedDB.sortDirection || "asc";
+                    allVerbLists = importedDB.allVerbLists || {};
+                    
+                    activeListName = importedDB.activeListName || Object.keys(allLists)[0] || "";
+                    activeVerbListName = importedDB.activeVerbListName || Object.keys(allVerbLists)[0] || "";
+                    
+                    renderListDropdown();
+                    renderVerbListDropdown();
+                    loadActiveListState();
+                    renderVerbEditorTable();
+                    updateVerbListUI();
 
-                // Force upload to Firestore and wait for completion
-                document.getElementById("sync-msg").innerText = "☁️ Uploading Restored Data...";
-                await db.collection("workspaces").doc(currentUser).set({
-                    allLists: allLists,
-                    activeListName: activeListName,
-                    allVerbLists: allVerbLists,
-                    activeVerbListName: activeVerbListName,
-                    lastUpdated: new Date()
-                });
+                    document.getElementById("sync-msg").innerText = "☁️ Uploading Restored Data...";
+                    await db.collection("workspaces").doc(currentUser).set({
+                        allLists: allLists,
+                        activeListName: activeListName,
+                        sortDirection: sortDirection,
+                        allVerbLists: allVerbLists,
+                        activeVerbListName: activeVerbListName,
+                        lastUpdated: new Date()
+                    });
 
-                document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
-                nextQuestion();
-                alert("Workspace restored and synced to cloud successfully!");
-            } else {
-                alert("Invalid backup file structure.");
+                    document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+                    nextQuestion();
+                    alert("Workspace restored and synced to cloud successfully!");
+                } else {
+                    alert("Invalid backup file structure.");
+                }
+            } catch (err) {
+                console.error("Database restore error:", err);
+                document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
+                alert("Failed to restore to Cloud Firestore: " + err.message);
+            } finally {
+                event.target.value = "";
             }
-        } catch (err) {
-            console.error("Database restore error:", err);
-            document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
-            alert("Failed to restore to Cloud Firestore: " + err.message);
-        } finally {
-            // Reset file input so the same file can be uploaded again if needed
-            event.target.value = "";
-        }
-    };
-    reader.readAsText(file);
-}
+        };
+        reader.readAsText(file);
+    }
 
     document.addEventListener("keydown", function(e) {
         if (e.key === "Enter") {
@@ -1774,6 +1815,7 @@
             if (docSnap.exists) {
                 const data = docSnap.data();
                 allLists = data.allLists || {};
+                sortDirection = data.sortDirection || "asc";
                 activeListName = data.activeListName || Object.keys(allLists)[0];
                 allVerbLists = data.allVerbLists || {};
                 activeVerbListName = data.activeVerbListName || Object.keys(allVerbLists)[0];
