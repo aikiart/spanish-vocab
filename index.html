@@ -707,13 +707,16 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-// LEGACY WORKSPACE MIGRATION: COPIES NAMED DOCUMENTS (e.g. 'ana', 'vero') TO UID DOCUMENTS
+// LEGACY WORKSPACE MIGRATION: COPIES NAMED DOCUMENTS (e.g. 'ana') TO UID DOCUMENTS IF EMPTY
     async function migrateLegacyWorkspaceIfNeeded(user) {
         try {
             const userRef = db.collection("workspaces").doc(user.uid);
             const userSnap = await userRef.get();
 
-            if (userSnap.exists) return;
+            // Only skip if the UID document already has lists populated
+            if (userSnap.exists && userSnap.data().allLists && Object.keys(userSnap.data().allLists).length > 0) {
+                return;
+            }
 
             const emailPrefix = user.email ? user.email.split('@')[0].toLowerCase().trim() : '';
 
@@ -731,10 +734,9 @@
                 }
             }
         } catch (err) {
-            console.warn("Legacy migration skipped (restricted by security rules or unavailable):", err.message);
+            console.warn("Legacy migration check skipped:", err.message);
         }
-    }
-    
+    }    
 
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
