@@ -764,7 +764,7 @@
             console.warn("Legacy migration check skipped:", err.message);
         }
     }
-    
+
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
         const signupView = document.getElementById("signup-view");
@@ -1879,17 +1879,36 @@ window.handleSignIn = async function() {
 async function initUserSession(workspaceId) {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         try {
-            const docSnap = await db.collection("workspaces").doc(workspaceId).get();
+            // First check the secure UID document
+            let docRef = db.collection("workspaces").doc(workspaceId);
+            let docSnap = await docRef.get();
 
-            if (docSnap.exists) {
-                const data = docSnap.data();
+            let data = null;
+            if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
+                data = docSnap.data();
+            } else {
+                // Fallback: Automatically search legacy documents if UID doc is empty
+                const emailPrefix = auth.currentUser && auth.currentUser.email ? auth.currentUser.email.split('@')[0].toLowerCase().trim() : '';
+                const legacyNames = [emailPrefix, 'ana', 'art', 'default', 'studio'];
                 
-                // Safely assign large maps with fallbacks
+                for (let name of legacyNames) {
+                    if (!name) continue;
+                    const legacySnap = await db.collection("workspaces").doc(name).get();
+                    if (legacySnap.exists && legacySnap.data().allLists && Object.keys(legacySnap.data().allLists).length > 0) {
+                        data = legacySnap.data();
+                        console.log(`Successfully pulled legacy lists from: "${name}"`);
+                        // Save them to your UID document for future logins
+                        await docRef.set(data, { merge: true });
+                        break;
+                    }
+                }
+            }
+
+            if (data && data.allLists && Object.keys(data.allLists).length > 0) {
                 allLists = data.allLists || {};
                 sortDirection = data.sortDirection || "asc";
                 allVerbLists = data.allVerbLists || {};
                 
-                // Resolve active list safely
                 const listKeys = Object.keys(allLists);
                 activeListName = (data.activeListName && allLists[data.activeListName]) ? data.activeListName : (listKeys[0] || "");
                 
@@ -1898,7 +1917,7 @@ async function initUserSession(workspaceId) {
 
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
                 
-                // Render UI components sequentially
+                // Render UI components
                 renderListDropdown();
                 renderVerbListDropdown();
                 loadActiveListState();
@@ -1906,6 +1925,7 @@ async function initUserSession(workspaceId) {
                 updateVerbListUI();
                 nextQuestion();
             } else {
+                console.warn("No lists found in cloud. Initializing default data.");
                 setupDefaultData();
             }
         } catch (err) {
