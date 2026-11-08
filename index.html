@@ -731,6 +731,28 @@
         }
     }
 
+function showAuthView(viewName) {
+        const signinView = document.getElementById("signin-view");
+        const signupView = document.getElementById("signup-view");
+        const verifyView = document.getElementById("verify-view");
+        const forgotView = document.getElementById("forgot-view");
+
+        if (signinView) signinView.style.display = "none";
+        if (signupView) signupView.style.display = "none";
+        if (verifyView) verifyView.style.display = "none";
+        if (forgotView) forgotView.style.display = "none";
+
+        if (viewName === 'signin' && signinView) {
+            signinView.style.display = "block";
+        } else if (viewName === 'signup' && signupView) {
+            signupView.style.display = "block";
+        } else if (viewName === 'verify' && verifyView) {
+            verifyView.style.display = "block";
+        } else if (viewName === 'forgot' && forgotView) {
+            forgotView.style.display = "block";
+        }
+    }
+
 // AUTH STATE MONITOR (ENFORCES EMAIL VERIFICATION & LOADS DATA)
    auth.onAuthStateChanged(async (user) => {
        const authContainer = document.getElementById("auth-container");
