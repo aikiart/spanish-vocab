@@ -897,7 +897,7 @@ function showAuthView(viewName) {
             msgBox.innerText = "Registration error: " + err.message;
         }
     }
-    async function handleSignIn() {
+window.handleSignIn = async function() {
         const email = document.getElementById("login-email").value.trim();
         const password = document.getElementById("login-password").value;
         const msgBox = document.getElementById("auth-status-msg");
@@ -921,7 +921,7 @@ function showAuthView(viewName) {
             msgBox.innerText = "Sign-in error: " + err.message;
         }
     }
-
+    
     async function handlePasswordReset() {
         const email = document.getElementById("reset-email").value.trim();
         const msgBox = document.getElementById("auth-status-msg");
