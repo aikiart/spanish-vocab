@@ -734,7 +734,7 @@
             console.warn("Legacy migration skipped (restricted by security rules or unavailable):", err.message);
         }
     }
-
+    
 
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
@@ -921,7 +921,7 @@ window.handleSignIn = async function() {
             msgBox.innerText = "Sign-in error: " + err.message;
         }
     }
-    
+
     async function handlePasswordReset() {
         const email = document.getElementById("reset-email").value.trim();
         const msgBox = document.getElementById("auth-status-msg");
@@ -1847,30 +1847,40 @@ window.handleSignIn = async function() {
         }
     });
 
-    async function initUserSession(workspaceId) {
+async function initUserSession(workspaceId) {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         try {
             const docSnap = await db.collection("workspaces").doc(workspaceId).get();
 
             if (docSnap.exists) {
                 const data = docSnap.data();
+                
+                // Safely assign large maps with fallbacks
                 allLists = data.allLists || {};
                 sortDirection = data.sortDirection || "asc";
-                activeListName = data.activeListName || Object.keys(allLists)[0] || "";
                 allVerbLists = data.allVerbLists || {};
-                activeVerbListName = data.activeVerbListName || Object.keys(allVerbLists)[0] || "";
+                
+                // Resolve active list safely
+                const listKeys = Object.keys(allLists);
+                activeListName = (data.activeListName && allLists[data.activeListName]) ? data.activeListName : (listKeys[0] || "");
+                
+                const verbListKeys = Object.keys(allVerbLists);
+                activeVerbListName = (data.activeVerbListName && allVerbLists[data.activeVerbListName]) ? data.activeVerbListName : (verbListKeys[0] || "");
 
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+                
+                // Render UI components sequentially
                 renderListDropdown();
                 renderVerbListDropdown();
                 loadActiveListState();
                 renderVerbEditorTable();
-                nextQuestion();
                 updateVerbListUI();
+                nextQuestion();
             } else {
                 setupDefaultData();
             }
         } catch (err) {
+            console.error("Session initialization error:", err);
             document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
             setupDefaultData();
         }
