@@ -830,7 +830,7 @@
                 renderVerbEditorTable();
                 updateVerbListUI();
                 nextQuestion();
-            } else {
+            },100); else {
                 console.warn("No cloud lists found. Initializing default starter data.");
                 await setupDefaultData();
             }
