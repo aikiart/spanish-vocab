@@ -897,6 +897,30 @@ function showAuthView(viewName) {
             msgBox.innerText = "Registration error: " + err.message;
         }
     }
+    async function handleSignIn() {
+        const email = document.getElementById("login-email").value.trim();
+        const password = document.getElementById("login-password").value;
+        const msgBox = document.getElementById("auth-status-msg");
+
+        if (!email || !password) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter both email and password.";
+            return;
+        }
+
+        try {
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Signing in...";
+            
+            await auth.signInWithEmailAndPassword(email, password);
+            
+            msgBox.style.color = "var(--accent-success)";
+            msgBox.innerText = "Signed in successfully!";
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Sign-in error: " + err.message;
+        }
+    }
 
     async function handlePasswordReset() {
         const email = document.getElementById("reset-email").value.trim();
