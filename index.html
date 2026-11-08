@@ -754,51 +754,52 @@ function showAuthView(viewName) {
     }
 
 // AUTH STATE MONITOR (ENFORCES EMAIL VERIFICATION & LOADS DATA)
-   auth.onAuthStateChanged(async (user) => {
-       const authContainer = document.getElementById("auth-container");
-       const appDashboard = document.getElementById("app-dashboard");
+    auth.onAuthStateChanged(async (user) => {
+        const authContainer = document.getElementById("auth-container");
+        const appDashboard = document.getElementById("app-dashboard");
 
-       if (user && !user.isAnonymous) {
-           try {
-               await user.reload();
-           } catch (error) {
-               console.error("Error reloading user state:", error);
-               // Gracefully fallback to sign-in view if reload fails
-               currentUserUid = null;
-               authContainer.style.display = "block";
-               appDashboard.style.display = "none";
-               showAuthView('signin');
-               return;
-           }
+        if (user && !user.isAnonymous) {
+            try {
+                await user.reload();
+            } catch (error) {
+                console.warn("Stale session token detected, resetting sign-in state:", error);
+                await auth.signOut();
+                currentUserUid = null;
+                if (authContainer) authContainer.style.display = "block";
+                if (appDashboard) appDashboard.style.display = "none";
+                showAuthView('signin');
+                return;
+            }
 
-           if (!user.emailVerified) {
-               authContainer.style.display = "block";
-               appDashboard.style.display = "none";
-               showAuthView('verify');
-               return;
-           }
+            if (!user.emailVerified) {
+                if (authContainer) authContainer.style.display = "block";
+                if (appDashboard) appDashboard.style.display = "none";
+                showAuthView('verify');
+                return;
+            }
 
-           try {
-               await migrateLegacyWorkspaceIfNeeded(user);
-           } catch (migrationError) {
-               console.error("Legacy workspace migration failed:", migrationError);
-               // Proceed anyway so the app doesn't lock the user out if migration hiccups
-           }
+            try {
+                await migrateLegacyWorkspaceIfNeeded(user);
+            } catch (migrationError) {
+                console.error("Legacy workspace migration failed:", migrationError);
+            }
 
-           currentUserUid = user.uid;
-           document.getElementById('user-display').innerText = `Workspace: ${user.email}`;
-           
-           authContainer.style.display = "none";
-           appDashboard.style.display = "block";
-           
-           initUserSession(user.uid);
-       } else {
-           currentUserUid = null;
-           authContainer.style.display = "block";
-           appDashboard.style.display = "none";
-           showAuthView('signin');
-       }
-   });
+            currentUserUid = user.uid;
+            const userDisplay = document.getElementById('user-display');
+            if (userDisplay) userDisplay.innerText = `Workspace: ${user.email}`;
+            
+            if (authContainer) authContainer.style.display = "none";
+            if (appDashboard) appDashboard.style.display = "block";
+            
+            initUserSession(user.uid);
+        } else {
+            currentUserUid = null;
+            if (authContainer) authContainer.style.display = "block";
+            if (appDashboard) appDashboard.style.display = "none";
+            showAuthView('signin');
+        }
+    });
+    
     async function handleResendVerification() {
         const user = auth.currentUser;
         const msgBox = document.getElementById("auth-status-msg");
@@ -811,6 +812,45 @@ function showAuthView(viewName) {
                 msgBox.style.color = "var(--accent-danger)";
                 msgBox.innerText = "Resend failed: " + err.message;
             }
+        }
+    }
+
+    async function handleSignUp() {
+        const email = document.getElementById("signup-email").value.trim();
+        const password = document.getElementById("signup-password").value;
+        const msgBox = document.getElementById("auth-status-msg");
+
+        if (!email || !password) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter both email and password.";
+            return;
+        }
+
+        if (password.length < 6) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Password must be at least 6 characters long.";
+            return;
+        }
+
+        try {
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Creating account...";
+            
+            // Create user with Firebase Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Send verification email
+            await user.sendEmailVerification();
+            
+            msgBox.style.color = "var(--accent-success)";
+            msgBox.innerText = "Account created! Verification email sent. Please check your inbox.";
+            
+            // Switch to verification view
+            showAuthView('verify');
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Registration error: " + err.message;
         }
     }
 
