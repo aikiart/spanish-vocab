@@ -1024,34 +1024,61 @@ window.handleSignIn = async function() {
         }
     }
 
-    function setupDefaultData() {
-        allLists["Default List"] = {
-            name: "Default List",
-            vocabulary: [{ es: "dominar", en: "master" }],
-            mastered: [], score: 0, total: 0
+async function setupDefaultData() {
+        console.log("Initializing default starter lists...");
+        
+        allLists = {
+            "Default List": {
+                name: "Default List",
+                vocabulary: [{ es: "dominar", en: "master" }],
+                mastered: [], 
+                score: 0, 
+                total: 0
+            }
         };
+
+        allVerbLists = {
+            "Common Verbs": {
+                name: "Common Verbs",
+                verbs: [
+                    { es: "hablar", en: "to speak", group: "-ar" },
+                    { es: "comer", en: "to eat", group: "-er" },
+                    { es: "vivir", en: "to live", group: "-ir" }
+                ]
+            }
+        };
+
         activeListName = "Default List";
+        activeVerbListName = "Common Verbs";
         sortDirection = "asc";
 
-        allVerbLists["Top 3 Verbs"] = {
-            name: "Top 3 Verbs",
-            verbs: [
-                { es: "hablar", en: "talk" },
-                { es: "comer", en: "eat" },
-                { es: "correr", en: "run" }
-            ]
-        };
-        activeVerbListName = "Top 3 Verbs";
-
+        // Render the dropdowns and UI immediately
         renderListDropdown();
         renderVerbListDropdown();
         loadActiveListState();
         renderVerbEditorTable();
-        nextQuestion();
         updateVerbListUI();
-        saveDatabaseToCloud();
-    }
+        nextQuestion();
 
+        document.getElementById("sync-msg").innerText = "☁️ Default Lists Loaded";
+
+        // Save these defaults to your Firestore workspace so they persist
+        if (auth.currentUser) {
+            try {
+                await db.collection("workspaces").doc(auth.currentUser.uid).set({
+                    allLists: allLists,
+                    allVerbLists: allVerbLists,
+                    activeListName: activeListName,
+                    activeVerbListName: activeVerbListName,
+                    sortDirection: sortDirection,
+                    lastUpdated: new Date()
+                }, { merge: true });
+                console.log("Default workspace successfully saved to Firestore.");
+            } catch (err) {
+                console.warn("Could not save default workspace to cloud:", err.message);
+            }
+        }
+    }
     async function saveDatabaseToCloud() {
         if (!currentUserUid) return;
         try {
