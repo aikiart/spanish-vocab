@@ -732,7 +732,6 @@
             const userRef = db.collection("workspaces").doc(user.uid);
             const userSnap = await userRef.get();
 
-            // If the user's UID document already has lists, skip migration
             if (userSnap.exists && userSnap.data().allLists && Object.keys(userSnap.data().allLists).length > 0) {
                 return;
             }
@@ -752,8 +751,7 @@
                         break;
                     }
                 } catch (readErr) {
-                    // Suppress individual permission denied errors for unowned legacy docs
-                    console.log(`Skipped legacy doc "${name}" due to permissions or absence.`);
+                    // Silently ignore permission errors on unowned legacy docs
                 }
             }
 
@@ -762,10 +760,10 @@
                     ...foundData,
                     migratedAt: new Date()
                 }, { merge: true });
-                console.log("Legacy workspace successfully migrated to user UID doc!");
+                console.log("Legacy workspace successfully migrated!");
             }
         } catch (err) {
-            console.warn("Legacy migration check completed with notices:", err.message);
+            console.warn("Legacy migration skipped:", err.message);
         }
     }
 
@@ -779,11 +777,29 @@
             let data = null;
             if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
                 data = docSnap.data();
+            } else {
+                // Safe legacy lookup inside initialization
+                const emailPrefix = auth.currentUser && auth.currentUser.email ? auth.currentUser.email.split('@')[0].toLowerCase().trim() : '';
+                const legacyNames = [emailPrefix, 'ana', 'art', 'default', 'studio'];
+                
+                for (let name of legacyNames) {
+                    if (!name) continue;
+                    try {
+                        const legacySnap = await db.collection("workspaces").doc(name).get();
+                        if (legacySnap.exists && legacySnap.data().allLists && Object.keys(legacySnap.data().allLists).length > 0) {
+                            data = legacySnap.data();
+                            console.log(`Successfully pulled legacy lists from: "${name}"`);
+                            await docRef.set(data, { merge: true });
+                            break;
+                        }
+                    } catch (e) {
+                        // Suppress permission denied errors
+                    }
+                }
             }
 
-            if (data && data.allLists) {
+            if (data && data.allLists && Object.keys(data.allLists).length > 0) {
                 allLists = {};
-                // Normalize list schemas to support both 'vocabulary' and 'words' keys
                 for (let [listName, listObj] of Object.entries(data.allLists)) {
                     const items = listObj.vocabulary || listObj.words || [];
                     allLists[listName] = {
@@ -807,7 +823,6 @@
 
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
 
-                // Render UI dropdowns and active state immediately
                 renderListDropdown();
                 renderVerbListDropdown();
                 loadActiveListState();
@@ -816,15 +831,16 @@
                 nextQuestion();
             } else {
                 console.warn("No cloud lists found. Initializing default starter data.");
-                setupDefaultData();
+                await setupDefaultData();
             }
         } catch (err) {
             console.error("Session initialization failed:", err);
             document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
-            setupDefaultData();
+            await setupDefaultData();
         }
     }
-    
+
+
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
         const signupView = document.getElementById("signup-view");
