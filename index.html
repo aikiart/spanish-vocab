@@ -726,30 +726,34 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-// LEGACY WORKSPACE MIGRATION: CHECKS MULTIPLE POSSIBLE LEGACY NAMES
+// 1. SAFE LEGACY MIGRATION WRAPPER
     async function migrateLegacyWorkspaceIfNeeded(user) {
         try {
             const userRef = db.collection("workspaces").doc(user.uid);
             const userSnap = await userRef.get();
 
-            // Only skip if the UID document already has lists populated
+            // If the user's UID document already has lists, skip migration
             if (userSnap.exists && userSnap.data().allLists && Object.keys(userSnap.data().allLists).length > 0) {
                 return;
             }
 
             const emailPrefix = user.email ? user.email.split('@')[0].toLowerCase().trim() : '';
-            // Check your email prefix, plus common legacy names like 'ana' or 'default'
-            const legacyNamesToTry = [emailPrefix, 'ana', 'default', 'studio'];
-            
+            const legacyNamesToTry = [emailPrefix, 'ana', 'art', 'default', 'studio'];
+
             let foundData = null;
-            for (let legacyName of legacyNamesToTry) {
-                if (!legacyName) continue;
-                const legacyRef = db.collection("workspaces").doc(legacyName);
-                const legacySnap = await legacyRef.get();
-                if (legacySnap.exists && legacySnap.data().allLists) {
-                    foundData = legacySnap.data();
-                    console.log(`Found legacy workspace under: "${legacyName}"`);
-                    break;
+            for (let name of legacyNamesToTry) {
+                if (!name) continue;
+                try {
+                    const legacyRef = db.collection("workspaces").doc(name);
+                    const legacySnap = await legacyRef.get();
+                    if (legacySnap.exists && legacySnap.data().allLists && Object.keys(legacySnap.data().allLists).length > 0) {
+                        foundData = legacySnap.data();
+                        console.log(`Found legacy workspace under: "${name}"`);
+                        break;
+                    }
+                } catch (readErr) {
+                    // Suppress individual permission denied errors for unowned legacy docs
+                    console.log(`Skipped legacy doc "${name}" due to permissions or absence.`);
                 }
             }
 
@@ -758,13 +762,69 @@
                     ...foundData,
                     migratedAt: new Date()
                 }, { merge: true });
-                console.log("Legacy workspace successfully migrated to UID!");
+                console.log("Legacy workspace successfully migrated to user UID doc!");
             }
         } catch (err) {
-            console.warn("Legacy migration check skipped:", err.message);
+            console.warn("Legacy migration check completed with notices:", err.message);
         }
     }
 
+    // 2. BULLETPROOF SESSION INITIALIZER & UI RENDERER
+    async function initUserSession(workspaceId) {
+        document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
+        try {
+            const docRef = db.collection("workspaces").doc(workspaceId);
+            const docSnap = await docRef.get();
+
+            let data = null;
+            if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
+                data = docSnap.data();
+            }
+
+            if (data && data.allLists) {
+                allLists = {};
+                // Normalize list schemas to support both 'vocabulary' and 'words' keys
+                for (let [listName, listObj] of Object.entries(data.allLists)) {
+                    const items = listObj.vocabulary || listObj.words || [];
+                    allLists[listName] = {
+                        name: listObj.name || listName,
+                        vocabulary: items,
+                        words: items,
+                        mastered: listObj.mastered || [],
+                        score: listObj.score || 0,
+                        total: listObj.total || items.length
+                    };
+                }
+
+                allVerbLists = data.allVerbLists || {};
+                sortDirection = data.sortDirection || "asc";
+                
+                const listKeys = Object.keys(allLists);
+                activeListName = (data.activeListName && allLists[data.activeListName]) ? data.activeListName : (listKeys[0] || "");
+                
+                const verbListKeys = Object.keys(allVerbLists);
+                activeVerbListName = (data.activeVerbListName && allVerbLists[data.activeVerbListName]) ? data.activeVerbListName : (verbListKeys[0] || "");
+
+                document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
+
+                // Render UI dropdowns and active state immediately
+                renderListDropdown();
+                renderVerbListDropdown();
+                loadActiveListState();
+                renderVerbEditorTable();
+                updateVerbListUI();
+                nextQuestion();
+            } else {
+                console.warn("No cloud lists found. Initializing default starter data.");
+                setupDefaultData();
+            }
+        } catch (err) {
+            console.error("Session initialization failed:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
+            setupDefaultData();
+        }
+    }
+    
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
         const signupView = document.getElementById("signup-view");
@@ -825,7 +885,8 @@ function showAuthView(viewName) {
             if (authContainer) authContainer.style.display = "none";
             if (appDashboard) appDashboard.style.display = "block";
             
-            initUserSession(user.uid);
+            // Await session initialization so data is fully loaded before rendering UI
+            await initUserSession(user.uid);
         } else {
             currentUserUid = null;
             if (authContainer) authContainer.style.display = "block";
@@ -833,7 +894,7 @@ function showAuthView(viewName) {
             showAuthView('signin');
         }
     });
-    
+
     async function handleResendVerification() {
         const user = auth.currentUser;
         const msgBox = document.getElementById("auth-status-msg");
