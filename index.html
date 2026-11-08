@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Language Practice Studio</title>
 
-    <!-- Firebase Core & Auth SDKs loaded in proper sequence -->
+    <!-- Firebase Core, Auth, and Firestore SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -58,6 +58,8 @@
             font-weight: 700;
             letter-spacing: -0.02em;
         }
+
+        h2 { font-size: 20px; margin-bottom: 15px; }
 
         .user-tag {
             display: inline-block;
@@ -455,6 +457,19 @@
             margin-bottom: 10px;
         }
 
+        .link-btn {
+            background: none;
+            border: none;
+            color: #818cf8;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            margin-top: 5px;
+        }
+
+        .auth-msg { font-size: 13px; font-weight: 500; margin-top: 10px; text-align: center; }
+
         #next-btn, #tense-next-btn { display: none; margin: 20px auto 0 auto; }
         .completion-box { display: none; margin: 20px 0; }
     </style>
@@ -463,254 +478,302 @@
 
 <div class="quiz-container">
     <h1>Language Practice Studio</h1>
-    <div id="user-display" class="user-tag">Workspace: Connecting...</div>
-    <div id="sync-msg" class="sync-status">Connecting to Cloud...</div>
 
-    <!-- LOGIN & ACCOUNT LINKING SECTION -->
-    <details class="upload-section" id="auth-details" style="margin-bottom: 20px;">
-        <summary>🔑 Account / Save Workspace</summary>
-        <div class="upload-controls" style="margin-top: 10px;">
-            <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
-                Link your guest workspace to an email and password so your vocabulary lists persist securely across devices.
+    <!-- 1. AUTHENTICATION CONTAINER (GATEKEEPER VIEW) -->
+    <div id="auth-container" class="upload-section" style="padding: 20px;">
+        <!-- SIGN IN FORM -->
+        <div id="signin-view">
+            <h2>Log In to Your Account</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">
+                Please sign in to access your saved vocabulary lists and verb practice workspace.
             </p>
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
-                <input type="text" id="auth-email" placeholder="Email Address" style="width: 95%;">
-                <input type="password" id="auth-password" placeholder="Password" style="width: 95%;">
-                <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success); align-self: flex-start;" onclick="handleAuthSubmit()">
-                    Save & Link Account
-                </button>
+            <div class="upload-controls">
+                <input type="text" id="login-email" placeholder="Email Address">
+                <input type="password" id="login-password" placeholder="Password">
+                <button type="button" class="action-btn" onclick="handleSignIn()">Sign In</button>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                    <button type="button" class="link-btn" onclick="showAuthView('forgot')">Forgot Password?</button>
+                    <button type="button" class="link-btn" onclick="showAuthView('signup')">Create an Account</button>
+                </div>
             </div>
         </div>
-    </details>
 
-    <div class="nav-tabs">
-        <button type="button" class="tab-btn active" id="tab-btn-vocab" onclick="switchTab('vocab-tab')">📚 Vocab Quiz</button>
-        <button type="button" class="tab-btn" id="tab-btn-tense" onclick="switchTab('tense-tab')">✍️ Verb Tenses</button>
+        <!-- CREATE ACCOUNT FORM -->
+        <div id="signup-view" style="display: none;">
+            <h2>Create New Account</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">
+                Create an account to build and preserve your custom Spanish vocabulary lists.
+            </p>
+            <div class="upload-controls">
+                <input type="text" id="signup-email" placeholder="Email Address">
+                <input type="password" id="signup-password" placeholder="Password (min. 6 characters)">
+                <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="handleSignUp()">Register Account</button>
+                
+                <div style="text-align: right; margin-top: 5px;">
+                    <button type="button" class="link-btn" onclick="showAuthView('signin')">Already have an account? Log In</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORGOT PASSWORD FORM -->
+        <div id="forgot-view" style="display: none;">
+            <h2>Reset Your Password</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">
+                Enter your account email address. We will send you a link to reset your password.
+            </p>
+            <div class="upload-controls">
+                <input type="text" id="reset-email" placeholder="Email Address">
+                <button type="button" class="action-btn" onclick="handlePasswordReset()">Send Reset Email</button>
+                
+                <div style="text-align: right; margin-top: 5px;">
+                    <button type="button" class="link-btn" onclick="showAuthView('signin')">Back to Sign In</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="auth-status-msg" class="auth-msg"></div>
     </div>
 
-    <!-- TAB 1: VOCABULARY QUIZ -->
-    <div id="vocab-tab" class="tab-content active">
-        <div class="list-selector-bar">
-            <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
-            <select id="active-list-select" onchange="switchList(this.value)"></select>
-            <button type="button" class="action-btn sm-btn" style="background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-primary);" id="sort-toggle-btn" onclick="toggleListSortDirection()">A-Z ⬆</button>
-            <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
-        </div>
-
-        <details class="upload-section" id="editor-details">
-            <summary>✏️ Edit Active List (Words & Translations)</summary>
-            <div class="upload-controls">
-                <div style="display: flex; gap: 8px; margin-top: 5px;">
-                    <input type="text" id="add-es" placeholder="Spanish Word" style="width: 40%;">
-                    <input type="text" id="add-en" placeholder="English Translation" style="width: 40%;">
-                    <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleWordPair()">+ Add</button>
-                </div>
-                <div class="editor-table-container">
-                    <table class="word-editor-table">
-                        <thead>
-                            <tr>
-                                <th>Spanish</th>
-                                <th>English</th>
-                                <th style="width: 60px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="editor-table-body"></tbody>
-                    </table>
-                </div>
-                <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveListEdits()">Save Changes</button>
-            </div>
-        </details>
-
-        <details class="upload-section" id="upload-details">
-            <summary>➕ Create / Add New Vocabulary List</summary>
-            <div class="upload-controls">
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
-                    <input type="text" id="new-list-name" placeholder="e.g. Action Verbs" style="width: 95%; margin-top: 4px;">
-                </div>
-                <div>
-                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload CSV/TXT File (2 columns):</label><br>
-                    <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
-                </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste word pairs below (e.g. <code>hablar, to speak</code>):</p>
-                <textarea id="paste-input" placeholder="hablar, to speak&#10;comer, to eat&#10;vivir, to live"></textarea>
-                <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewList()">Save New List</button>
-            </div>
-        </details>
-
-        <div class="controls">
+    <!-- 2. MAIN DASHBOARD (HIDDEN UNTIL LOGIN) -->
+    <div id="app-dashboard" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div>
-                <label for="direction">Direction: </label>
-                <select id="direction" onchange="saveCurrentState(); nextQuestion();">
-                    <option value="es-en">Spanish ➔ English</option>
-                    <option value="en-es">English ➔ Spanish</option>
-                    <option value="mixed">Mixed (Both)</option>
-                </select>
+                <div id="user-display" class="user-tag">Workspace: User</div>
+                <div id="sync-msg" class="sync-status">☁️ Cloud Synced</div>
             </div>
-            <div>
-                <label for="format">Type: </label>
-                <select id="format" onchange="saveCurrentState(); nextQuestion();">
-                    <option value="write">Write-In</option>
-                    <option value="mc">Multiple Choice</option>
-                    <option value="sentence">Sentence Builder</option>
-                </select>
-            </div>
+            <button type="button" class="action-btn danger-btn sm-btn" onclick="handleSignOut()">Log Out</button>
         </div>
 
-        <label class="toggle-container">
-            <input type="checkbox" id="include-mastered" onchange="saveCurrentState(); nextQuestion();">
-            Include previously mastered words
-        </label>
-
-        <div class="score-board">
-            Mastered: <span id="mastered-count">0</span> / <span id="total-words">0</span> | 
-            Score: <span id="score">0</span> / <span id="total">0</span>
+        <div class="nav-tabs">
+            <button type="button" class="tab-btn active" id="tab-btn-vocab" onclick="switchTab('vocab-tab')">📚 Vocab Quiz</button>
+            <button type="button" class="tab-btn" id="tab-btn-tense" onclick="switchTab('tense-tab')">✍️ Verb Tenses</button>
         </div>
 
-        <div id="game-view">
-            <div class="prompt-wrapper">
-                <div class="prompt" id="prompt">Word</div>
-                <button type="button" class="audio-btn" onclick="replayAudio()" title="Listen">🔊</button>
+        <!-- TAB 1: VOCABULARY QUIZ -->
+        <div id="vocab-tab" class="tab-content active">
+            <div class="list-selector-bar">
+                <label for="active-list-select" style="font-weight: 600; color: var(--text-secondary);">Active List:</label>
+                <select id="active-list-select" onchange="switchList(this.value)"></select>
+                <button type="button" class="action-btn sm-btn" style="background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-primary);" id="sort-toggle-btn" onclick="toggleListSortDirection()">A-Z ⬆</button>
+                <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentList()">Delete List</button>
             </div>
 
-            <div class="options-grid" id="options" style="display: none;"></div>
-
-            <div class="write-input-container" id="write-container">
-                <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
-                <button type="button" class="action-btn" id="submit-btn" onclick="handleWriteSubmit()">Submit</button>
-            </div>
-
-            <div class="sentence-card" id="sentence-container" style="display: none;">
-                <h3>
-                    <span>✍️ Use word in context:</span>
-                    <span class="sentence-score-board">
-                        Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
-                    </span>
-                </h3>
-                <textarea id="sentence-input" class="sentence-input-box" rows="3" placeholder="Type a sentence using this word in context..."></textarea>
-                <div style="margin-top: 12px; display: flex; gap: 10px;">
-                    <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkSentenceSyntax()">Check Syntax</button>
-                    <button type="button" class="audio-btn" onclick="speakSentence()">🔊 Hear Sentence</button>
+            <details class="upload-section" id="editor-details">
+                <summary>✏️ Edit Active List (Words & Translations)</summary>
+                <div class="upload-controls">
+                    <div style="display: flex; gap: 8px; margin-top: 5px;">
+                        <input type="text" id="add-es" placeholder="Spanish Word" style="width: 40%;">
+                        <input type="text" id="add-en" placeholder="English Translation" style="width: 40%;">
+                        <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleWordPair()">+ Add</button>
+                    </div>
+                    <div class="editor-table-container">
+                        <table class="word-editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Spanish</th>
+                                    <th>English</th>
+                                    <th style="width: 60px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="editor-table-body"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveListEdits()">Save Changes</button>
                 </div>
-                <div id="sentence-feedback" class="correction-output"></div>
-            </div>
+            </details>
 
-            <div class="feedback" id="feedback"></div>
-            <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
-        </div>
-
-        <div class="completion-box" id="completion-view">
-            <h2>🎉 All Words Mastered! 🎉</h2>
-            <p style="color: var(--text-secondary);">You have completed every word in this list!</p>
-            <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress</button>
-        </div>
-    </div>
-
-    <!-- TAB 2: VERB TENSE CONJUGATION PRACTICE -->
-    <div id="tense-tab" class="tab-content">
-        <div class="list-selector-bar">
-            <label for="active-verb-list-select" style="font-weight: 600; color: var(--text-secondary);">Active Verb List:</label>
-            <select id="active-verb-list-select" onchange="switchVerbList(this.value)"></select>
-            <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
-        </div>
-
-        <div class="instruction-banner">
-            💡 <strong>Instruction:</strong> Please upload a list of infinitive verbs in 2 columns, spanish-english, do this as a csv file or paste it.
-        </div>
-
-        <details class="upload-section" id="verb-editor-details">
-            <summary>✏️ Edit Active Verb List (Verbs & Translations)</summary>
-            <div class="upload-controls">
-                <div style="display: flex; gap: 8px; margin-top: 5px;">
-                    <input type="text" id="add-verb-es" placeholder="Spanish Verb (e.g. hablar)" style="width: 40%;">
-                    <input type="text" id="add-verb-en" placeholder="English Translation (e.g. talk)" style="width: 40%;">
-                    <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleVerbPair()">+ Add</button>
+            <details class="upload-section" id="upload-details">
+                <summary>➕ Create / Add New Vocabulary List</summary>
+                <div class="upload-controls">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
+                        <input type="text" id="new-list-name" placeholder="e.g. Action Verbs" style="width: 95%; margin-top: 4px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload CSV/TXT File (2 columns):</label><br>
+                        <input type="file" id="file-input" accept=".txt,.csv" onchange="handleFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste word pairs below (e.g. <code>hablar, to speak</code>):</p>
+                    <textarea id="paste-input" placeholder="hablar, to speak&#10;comer, to eat&#10;vivir, to live"></textarea>
+                    <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewList()">Save New List</button>
                 </div>
-                <div class="editor-table-container">
-                    <table class="word-editor-table">
-                        <thead>
-                            <tr>
-                                <th>Spanish Verb</th>
-                                <th>English Translation</th>
-                                <th style="width: 60px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="verb-editor-table-body"></tbody>
-                    </table>
-                </div>
-                <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveVerbListEdits()">Save Changes</button>
-            </div>
-        </details>
+            </details>
 
-        <details class="upload-section" id="verb-upload-details">
-            <summary>➕ Import & Save New Verb List to Cloud</summary>
-            <div class="upload-controls">
+            <div class="controls">
                 <div>
-                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
-                    <input type="text" id="new-verb-list-name" placeholder="e.g. Top 3 Verbs" style="width: 95%; margin-top: 4px;">
+                    <label for="direction">Direction: </label>
+                    <select id="direction" onchange="saveCurrentState(); nextQuestion();">
+                        <option value="es-en">Spanish ➔ English</option>
+                        <option value="en-es">English ➔ Spanish</option>
+                        <option value="mixed">Mixed (Both)</option>
+                    </select>
                 </div>
                 <div>
-                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload Verb File (.csv / .txt):</label><br>
-                    <input type="file" id="verb-file-input" accept=".txt,.csv" onchange="handleVerbFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                    <label for="format">Type: </label>
+                    <select id="format" onchange="saveCurrentState(); nextQuestion();">
+                        <option value="write">Write-In</option>
+                        <option value="mc">Multiple Choice</option>
+                        <option value="sentence">Sentence Builder</option>
+                    </select>
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste 2-column list (Infinitive, English):</p>
-                <textarea id="verb-paste-input" placeholder="hablar, talk&#10;comer, eat&#10;correr, run"></textarea>
-                <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewVerbList()">Save Verb List to Cloud</button>
-            </div>
-        </details>
-
-        <div class="controls">
-            <div>
-                <label for="tense-direction">Direction: </label>
-                <select id="tense-direction" onchange="nextTenseQuestion()">
-                    <option value="es-en">Spanish ➔ English</option>
-                    <option value="en-es">English ➔ Spanish</option>
-                    <option value="mixed">Mixed (Both)</option>
-                </select>
-            </div>
-            <div>
-                <label for="tense-select">Practice Tense: </label>
-                <select id="tense-select" onchange="nextTenseQuestion()">
-                    <option value="random">Random Tense</option>
-                    <option value="present">Present (Presente)</option>
-                    <option value="preterite">Preterite (Pretérito Indefinido)</option>
-                    <option value="imperfect">Imperfect (Pretérito Imperfecto)</option>
-                    <option value="future">Future (Futuro)</option>
-                    <option value="conditional">Conditional (Condicional)</option>
-                    <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="score-board">
-            Total Verbs in Active List: <span id="total-verbs-count">0</span> | 
-            Sentences Practiced: <span id="tense-score-count">0</span>
-        </div>
-
-        <div id="tense-game-view">
-            <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
-                <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
-                <div class="prompt" id="tense-prompt">hablar (talk)</div>
-                <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
             </div>
 
-            <div class="sentence-card" style="border-top: none; padding-top: 0;">
-                <textarea id="tense-sentence-input" class="sentence-input-box" rows="3" placeholder="Write a sentence using this conjugated verb..."></textarea>
-                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center;">
-                    <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkTenseSentence()">Check Sentence</button>
-                    <button type="button" class="audio-btn" onclick="speakTenseSentence()">🔊 Hear Sentence</button>
+            <label class="toggle-container">
+                <input type="checkbox" id="include-mastered" onchange="saveCurrentState(); nextQuestion();">
+                Include previously mastered words
+            </label>
+
+            <div class="score-board">
+                Mastered: <span id="mastered-count">0</span> / <span id="total-words">0</span> | 
+                Score: <span id="score">0</span> / <span id="total">0</span>
+            </div>
+
+            <div id="game-view">
+                <div class="prompt-wrapper">
+                    <div class="prompt" id="prompt">Word</div>
+                    <button type="button" class="audio-btn" onclick="replayAudio()" title="Listen">🔊</button>
                 </div>
-                <div id="tense-feedback" class="correction-output"></div>
+
+                <div class="options-grid" id="options" style="display: none;"></div>
+
+                <div class="write-input-container" id="write-container">
+                    <input type="text" id="user-input" class="text-input" placeholder="Type answer here..." autocomplete="off">
+                    <button type="button" class="action-btn" id="submit-btn" onclick="handleWriteSubmit()">Submit</button>
+                </div>
+
+                <div class="sentence-card" id="sentence-container" style="display: none;">
+                    <h3>
+                        <span>✍️ Use word in context:</span>
+                        <span class="sentence-score-board">
+                            Correct: <span id="sentence-correct">0</span> | Needs Revision: <span id="sentence-incorrect">0</span>
+                        </span>
+                    </h3>
+                    <textarea id="sentence-input" class="sentence-input-box" rows="3" placeholder="Type a sentence using this word in context..."></textarea>
+                    <div style="margin-top: 12px; display: flex; gap: 10px;">
+                        <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkSentenceSyntax()">Check Syntax</button>
+                        <button type="button" class="audio-btn" onclick="speakSentence()">🔊 Hear Sentence</button>
+                    </div>
+                    <div id="sentence-feedback" class="correction-output"></div>
+                </div>
+
+                <div class="feedback" id="feedback"></div>
+                <button type="button" class="action-btn" id="next-btn" onclick="nextQuestion()">Next Word ↵</button>
             </div>
 
-            <button type="button" class="action-btn" id="tense-next-btn" onclick="nextTenseQuestion()">Next Verb Prompt ↵</button>
+            <div class="completion-box" id="completion-view">
+                <h2>🎉 All Words Mastered! 🎉</h2>
+                <p style="color: var(--text-secondary);">You have completed every word in this list!</p>
+                <button type="button" class="action-btn" onclick="resetListProgress()">Reset Progress</button>
+            </div>
         </div>
-    </div>
 
-    <div class="backup-bar">
-        <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup Workspace (JSON)</button>
-        <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore Workspace (JSON)</button>
-        <input type="file" id="import-db-input" accept=".json" style="display: none;" onchange="importDatabase(event)">
+        <!-- TAB 2: VERB TENSE CONJUGATION PRACTICE -->
+        <div id="tense-tab" class="tab-content">
+            <div class="list-selector-bar">
+                <label for="active-verb-list-select" style="font-weight: 600; color: var(--text-secondary);">Active Verb List:</label>
+                <select id="active-verb-list-select" onchange="switchVerbList(this.value)"></select>
+                <button type="button" class="action-btn danger-btn sm-btn" onclick="deleteCurrentVerbList()">Delete List</button>
+            </div>
+
+            <div class="instruction-banner">
+                💡 <strong>Instruction:</strong> Please upload a list of infinitive verbs in 2 columns, spanish-english, do this as a csv file or paste it.
+            </div>
+
+            <details class="upload-section" id="verb-editor-details">
+                <summary>✏️ Edit Active Verb List (Verbs & Translations)</summary>
+                <div class="upload-controls">
+                    <div style="display: flex; gap: 8px; margin-top: 5px;">
+                        <input type="text" id="add-verb-es" placeholder="Spanish Verb (e.g. hablar)" style="width: 40%;">
+                        <input type="text" id="add-verb-en" placeholder="English Translation (e.g. talk)" style="width: 40%;">
+                        <button type="button" class="action-btn sm-btn" style="background-color: var(--accent-success);" onclick="addSingleVerbPair()">+ Add</button>
+                    </div>
+                    <div class="editor-table-container">
+                        <table class="word-editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Spanish Verb</th>
+                                    <th>English Translation</th>
+                                    <th style="width: 60px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verb-editor-table-body"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="action-btn sm-btn" style="align-self: flex-end; margin-top: 8px;" onclick="saveVerbListEdits()">Save Changes</button>
+                </div>
+            </details>
+
+            <details class="upload-section" id="verb-upload-details">
+                <summary>➕ Import & Save New Verb List to Cloud</summary>
+                <div class="upload-controls">
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">List Name:</label><br>
+                        <input type="text" id="new-verb-list-name" placeholder="e.g. Top 3 Verbs" style="width: 95%; margin-top: 4px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Upload Verb File (.csv / .txt):</label><br>
+                        <input type="file" id="verb-file-input" accept=".txt,.csv" onchange="handleVerbFileUpload(event)" style="margin-top: 4px; color: var(--text-secondary);">
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Or paste 2-column list (Infinitive, English):</p>
+                    <textarea id="verb-paste-input" placeholder="hablar, talk&#10;comer, eat&#10;correr, run"></textarea>
+                    <button type="button" class="action-btn" style="align-self: flex-start; background-color: var(--accent-success);" onclick="createNewVerbList()">Save Verb List to Cloud</button>
+                </div>
+            </details>
+
+            <div class="controls">
+                <div>
+                    <label for="tense-direction">Direction: </label>
+                    <select id="tense-direction" onchange="nextTenseQuestion()">
+                        <option value="es-en">Spanish ➔ English</option>
+                        <option value="en-es">English ➔ Spanish</option>
+                        <option value="mixed">Mixed (Both)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="tense-select">Practice Tense: </label>
+                    <select id="tense-select" onchange="nextTenseQuestion()">
+                        <option value="random">Random Tense</option>
+                        <option value="present">Present (Presente)</option>
+                        <option value="preterite">Preterite (Pretérito Indefinido)</option>
+                        <option value="imperfect">Imperfect (Pretérito Imperfecto)</option>
+                        <option value="future">Future (Futuro)</option>
+                        <option value="conditional">Conditional (Condicional)</option>
+                        <option value="subjunctive">Present Subjunctive (Subjuntivo)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="score-board">
+                Total Verbs in Active List: <span id="total-verbs-count">0</span> | 
+                Sentences Practiced: <span id="tense-score-count">0</span>
+            </div>
+
+            <div id="tense-game-view">
+                <div class="prompt-wrapper" style="flex-direction: column; gap: 4px;">
+                    <div class="tense-tag" id="target-tense-display">Tense: Presente</div>
+                    <div class="prompt" id="tense-prompt">hablar (talk)</div>
+                    <div style="font-size: 15px; color: var(--text-secondary);" id="pronoun-prompt">Subject: Yo</div>
+                </div>
+
+                <div class="sentence-card" style="border-top: none; padding-top: 0;">
+                    <textarea id="tense-sentence-input" class="sentence-input-box" rows="3" placeholder="Write a sentence using this conjugated verb..."></textarea>
+                    <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center;">
+                        <button type="button" class="action-btn" style="background-color: var(--accent-success);" onclick="checkTenseSentence()">Check Sentence</button>
+                        <button type="button" class="audio-btn" onclick="speakTenseSentence()">🔊 Hear Sentence</button>
+                    </div>
+                    <div id="tense-feedback" class="correction-output"></div>
+                </div>
+
+                <button type="button" class="action-btn" id="tense-next-btn" onclick="nextTenseQuestion()">Next Verb Prompt ↵</button>
+            </div>
+        </div>
+
+        <div class="backup-bar">
+            <button type="button" class="action-btn backup-btn" onclick="exportDatabase()">📥 Backup Workspace (JSON)</button>
+            <button type="button" class="action-btn backup-btn" onclick="document.getElementById('import-db-input').click()">📤 Restore Workspace (JSON)</button>
+            <input type="file" id="import-db-input" accept=".json" style="display: none;" onchange="importDatabase(event)">
+        </div>
     </div>
 </div>
 
@@ -739,63 +802,107 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-    // Automatically initialize or restore Auth session
+    // AUTH STATE MONITOR (GATES ACCESS UNTIL LOGGED IN)
     auth.onAuthStateChanged(async (user) => {
-        if (!user) {
-            try {
-                await auth.signInAnonymously();
-            } catch (error) {
-                console.error("Anonymous auth error:", error);
-                document.getElementById("sync-msg").innerText = "⚠️ Auth Error";
-            }
-        } else {
+        const authContainer = document.getElementById("auth-container");
+        const appDashboard = document.getElementById("app-dashboard");
+
+        if (user && !user.isAnonymous) {
             currentUserUid = user.uid;
-            document.getElementById('user-display').innerText = user.isAnonymous 
-                ? "Workspace: Guest Account" 
-                : `Workspace: ${user.email}`;
+            document.getElementById('user-display').innerText = `Workspace: ${user.email}`;
+            
+            authContainer.style.display = "none";
+            appDashboard.style.display = "block";
+            
             initUserSession(user.uid);
+        } else {
+            currentUserUid = null;
+            authContainer.style.display = "block";
+            appDashboard.style.display = "none";
+            showAuthView('signin');
         }
     });
 
-    // Handle Auth Submission from Form
-    async function handleAuthSubmit() {
-        const email = document.getElementById("auth-email").value.trim();
-        const password = document.getElementById("auth-password").value.trim();
+    function showAuthView(viewName) {
+        document.getElementById("signin-view").style.display = viewName === 'signin' ? 'block' : 'none';
+        document.getElementById("signup-view").style.display = viewName === 'signup' ? 'block' : 'none';
+        document.getElementById("forgot-view").style.display = viewName === 'forgot' ? 'block' : 'none';
+        document.getElementById("auth-status-msg").innerText = "";
+    }
+
+    // AUTHENTICATION FUNCTIONS
+    async function handleSignIn() {
+        const email = document.getElementById("login-email").value.trim();
+        const password = document.getElementById("login-password").value.trim();
+        const msgBox = document.getElementById("auth-status-msg");
 
         if (!email || !password) {
-            alert("Please enter both email and password.");
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter both email and password.";
+            return;
+        }
+
+        try {
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Signing in...";
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Login failed: " + err.message;
+        }
+    }
+
+    async function handleSignUp() {
+        const email = document.getElementById("signup-email").value.trim();
+        const password = document.getElementById("signup-password").value.trim();
+        const msgBox = document.getElementById("auth-status-msg");
+
+        if (!email || !password) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter both email and password.";
             return;
         }
 
         if (password.length < 6) {
-            alert("Password must be at least 6 characters long.");
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Password must be at least 6 characters long.";
             return;
         }
 
-        await convertGuestToPermanentAccount(email, password);
-        document.getElementById("auth-email").value = "";
-        document.getElementById("auth-password").value = "";
-        document.getElementById("auth-details").open = false;
+        try {
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Creating account...";
+            await auth.createUserWithEmailAndPassword(email, password);
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Registration failed: " + err.message;
+        }
     }
 
-    // Link guest session to permanent account without losing data
-    async function convertGuestToPermanentAccount(email, password) {
-        const user = auth.currentUser;
-        if (!user) return;
+    async function handlePasswordReset() {
+        const email = document.getElementById("reset-email").value.trim();
+        const msgBox = document.getElementById("auth-status-msg");
 
-        const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+        if (!email) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter your email address.";
+            return;
+        }
 
         try {
-            if (user.isAnonymous) {
-                await user.linkWithCredential(credential);
-                document.getElementById('user-display').innerText = `Workspace: ${user.email}`;
-                alert("Account linked! Your vocabulary lists are saved to your account.");
-            } else {
-                await auth.signInWithCredential(credential);
-            }
-        } catch (error) {
-            alert("Account linking error: " + error.message);
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Sending reset link...";
+            await auth.sendPasswordResetEmail(email);
+            msgBox.style.color = "var(--accent-success)";
+            msgBox.innerText = "Password reset email sent! Check your inbox.";
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Reset error: " + err.message;
         }
+    }
+
+    async function handleSignOut() {
+        await auth.signOut();
     }
 
     const spanishPronouns = [
@@ -870,6 +977,7 @@
         renderVerbEditorTable();
         nextQuestion();
         updateVerbListUI();
+        saveDatabaseToCloud();
     }
 
     async function saveDatabaseToCloud() {
@@ -883,7 +991,7 @@
                 allVerbLists: allVerbLists,
                 activeVerbListName: activeVerbListName,
                 lastUpdated: new Date()
-            }, { merge: true }); // Prevent multi-tab overwrites
+            }, { merge: true });
             document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
         } catch (err) {
             document.getElementById("sync-msg").innerText = "⚠️ Cloud Save Failed";
@@ -1644,9 +1752,9 @@
 
         const listData = allLists[activeListName];
         const includeMastered = document.getElementById("include-mastered").checked;
-        const masteredSet = new Set(listData.mastered || []);
+        const masteredSet = new Set(listData ? listData.mastered || [] : []);
 
-        let activePool = listData.vocabulary || [];
+        let activePool = listData ? listData.vocabulary || [] : [];
         if (!includeMastered) {
             activePool = activePool.filter(pair => !masteredSet.has(pair.es));
         }
