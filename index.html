@@ -696,6 +696,28 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    async function clearStaleSession() {
+        try {
+            await auth.signOut();
+            window.localStorage.clear();
+            const dbs = await window.indexedDB.databases();
+            for (let dbInfo of dbs) {
+                if (dbInfo.name && dbInfo.name.includes('firebase')) {
+                    window.indexedDB.deleteDatabase(dbInfo.name);
+                }
+            }
+            alert("Session cache cleared successfully. Please log in again.");
+            location.reload();
+        } catch (e) {
+            console.error("Error clearing session:", e);
+            location.reload();
+        }
+    }
+
     let currentUserUid = null;
     let allLists = {};
     let activeListName = "";
