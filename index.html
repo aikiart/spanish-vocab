@@ -1101,61 +1101,6 @@ window.handleSignIn = async function() {
         }
     }
 
-async function setupDefaultData() {
-        console.log("Initializing default starter lists...");
-        
-        allLists = {
-            "Default List": {
-                name: "Default List",
-                vocabulary: [{ es: "dominar", en: "master" }],
-                mastered: [], 
-                score: 0, 
-                total: 0
-            }
-        };
-
-        allVerbLists = {
-            "Common Verbs": {
-                name: "Common Verbs",
-                verbs: [
-                    { es: "hablar", en: "to speak", group: "-ar" },
-                    { es: "comer", en: "to eat", group: "-er" },
-                    { es: "vivir", en: "to live", group: "-ir" }
-                ]
-            }
-        };
-
-        activeListName = "Default List";
-        activeVerbListName = "Common Verbs";
-        sortDirection = "asc";
-
-        // Render the dropdowns and UI immediately
-        renderListDropdown();
-        renderVerbListDropdown();
-        loadActiveListState();
-        renderVerbEditorTable();
-        updateVerbListUI();
-        nextQuestion();
-
-        document.getElementById("sync-msg").innerText = "☁️ Default Lists Loaded";
-
-        // Save these defaults to your Firestore workspace so they persist
-        if (auth.currentUser) {
-            try {
-                await db.collection("workspaces").doc(auth.currentUser.uid).set({
-                    allLists: allLists,
-                    allVerbLists: allVerbLists,
-                    activeListName: activeListName,
-                    activeVerbListName: activeVerbListName,
-                    sortDirection: sortDirection,
-                    lastUpdated: new Date()
-                }, { merge: true });
-                console.log("Default workspace successfully saved to Firestore.");
-            } catch (err) {
-                console.warn("Could not save default workspace to cloud:", err.message);
-            }
-        }
-    }
     async function saveDatabaseToCloud() {
         if (!currentUserUid) return;
         try {
@@ -1980,38 +1925,117 @@ async function setupDefaultData() {
         }
     });
 
-async function initUserSession(workspaceId) {
+async function setupDefaultData() {
+        console.log("🛠️ Force-initializing fallback starter data...");
+        
+        allLists = {
+            "Spanish Essentials": {
+                name: "Spanish Essentials",
+                vocabulary: [
+                    { es: "hola", en: "hello" },
+                    { es: "gracias", en: "thank you" },
+                    { es: "por favor", en: "please" },
+                    { es: "buenos días", en: "good morning" },
+                    { es: "adiós", en: "goodbye" }
+                ],
+                mastered: [], score: 0, total: 5, direction: "es-en", format: "write"
+            }
+        };
+
+        allVerbLists = {
+            "Common Verbs": {
+                name: "Common Verbs",
+                verbs: [
+                    { es: "hablar", en: "to speak", group: "-ar" },
+                    { es: "comer", en: "to eat", group: "-er" },
+                    { es: "vivir", en: "to live", group: "-ir" }
+                ]
+            }
+        };
+
+        activeListName = "Spanish Essentials";
+        activeVerbListName = "Common Verbs";
+        sortDirection = "asc";
+
+        // Force render UI immediately
+        renderListDropdown();
+        renderVerbListDropdown();
+        loadActiveListState();
+        renderVerbEditorTable();
+        updateVerbListUI();
+        nextQuestion();
+
+        document.getElementById("sync-msg").innerText = "☁️ Local Starter Lists Active";
+
+        // Attempt background cloud save
+        if (auth.currentUser) {
+            try {
+                await db.collection("workspaces").doc(auth.currentUser.uid).set({
+                    allLists: allLists,
+                    allVerbLists: allVerbLists,
+                    activeListName: activeListName,
+                    activeVerbListName: activeVerbListName,
+                    sortDirection: sortDirection,
+                    lastUpdated: new Date()
+                }, { merge: true });
+                console.log("☁️ Starter lists successfully synced to Firestore.");
+            } catch (err) {
+                console.warn("Background sync skipped:", err.message);
+            }
+        }
+    }
+
+    async function initUserSession(workspaceId) {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
+        
         try {
-            // First check the secure UID document
-            let docRef = db.collection("workspaces").doc(workspaceId);
-            let docSnap = await docRef.get();
+            const docRef = db.collection("workspaces").doc(workspaceId);
+            const docSnap = await docRef.get();
 
             let data = null;
             if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
                 data = docSnap.data();
+                console.log("☁️ Successfully loaded workspace from secure UID document.");
             } else {
-                // Fallback: Automatically search legacy documents if UID doc is empty
+                // Try legacy check safely
                 const emailPrefix = auth.currentUser && auth.currentUser.email ? auth.currentUser.email.split('@')[0].toLowerCase().trim() : '';
                 const legacyNames = [emailPrefix, 'ana', 'art', 'default', 'studio'];
                 
                 for (let name of legacyNames) {
                     if (!name) continue;
-                    const legacySnap = await db.collection("workspaces").doc(name).get();
-                    if (legacySnap.exists && legacySnap.data().allLists && Object.keys(legacySnap.data().allLists).length > 0) {
-                        data = legacySnap.data();
-                        console.log(`Successfully pulled legacy lists from: "${name}"`);
-                        // Save them to your UID document for future logins
-                        await docRef.set(data, { merge: true });
-                        break;
+                    try {
+                        const legacySnap = await db.collection("workspaces").doc(name).get();
+                        if (legacySnap.exists && legacySnap.data().allLists && Object.keys(legacySnap.data().allLists).length > 0) {
+                            data = legacySnap.data();
+                            console.log(`☁️ Successfully pulled legacy lists from: "${name}"`);
+                            await docRef.set(data, { merge: true });
+                            break;
+                        }
+                    } catch (e) {
+                        // Suppress permission errors on unowned legacy docs
                     }
                 }
             }
 
+            // If we successfully retrieved cloud or legacy data, normalize and load it
             if (data && data.allLists && Object.keys(data.allLists).length > 0) {
-                allLists = data.allLists || {};
-                sortDirection = data.sortDirection || "asc";
+                allLists = {};
+                for (let [listName, listObj] of Object.entries(data.allLists)) {
+                    const items = listObj.vocabulary || listObj.words || [];
+                    allLists[listName] = {
+                        name: listObj.name || listName,
+                        vocabulary: items,
+                        words: items,
+                        mastered: listObj.mastered || [],
+                        score: listObj.score || 0,
+                        total: listObj.total || items.length,
+                        direction: listObj.direction || "es-en",
+                        format: listObj.format || "write"
+                    };
+                }
+
                 allVerbLists = data.allVerbLists || {};
+                sortDirection = data.sortDirection || "asc";
                 
                 const listKeys = Object.keys(allLists);
                 activeListName = (data.activeListName && allLists[data.activeListName]) ? data.activeListName : (listKeys[0] || "");
@@ -2020,7 +2044,7 @@ async function initUserSession(workspaceId) {
                 activeVerbListName = (data.activeVerbListName && allVerbLists[data.activeVerbListName]) ? data.activeVerbListName : (verbListKeys[0] || "");
 
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
-                
+
                 // Render UI components
                 renderListDropdown();
                 renderVerbListDropdown();
@@ -2029,15 +2053,16 @@ async function initUserSession(workspaceId) {
                 updateVerbListUI();
                 nextQuestion();
             } else {
-                console.warn("No lists found in cloud. Initializing default data.");
-                setupDefaultData();
+                // GUARANTEED FALLBACK: If cloud returns nothing, load local defaults immediately
+                console.warn("⚠️ No cloud data resolved. Executing guaranteed local fallback.");
+                await setupDefaultData();
             }
         } catch (err) {
-            console.error("Session initialization error:", err);
-            document.getElementById("sync-msg").innerText = "⚠️ Offline Mode";
-            setupDefaultData();
+            console.error("Critical session error, falling back to local defaults:", err);
+            document.getElementById("sync-msg").innerText = "⚠️ Offline Fallback Mode";
+            await setupDefaultData();
         }
     }
-</script>
+    </script>
 </body>
 </html>
