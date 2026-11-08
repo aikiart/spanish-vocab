@@ -854,6 +854,45 @@ function showAuthView(viewName) {
         }
     }
 
+    async function handleSignUp() {
+        const email = document.getElementById("signup-email").value.trim();
+        const password = document.getElementById("signup-password").value;
+        const msgBox = document.getElementById("auth-status-msg");
+
+        if (!email || !password) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Please enter both email and password.";
+            return;
+        }
+
+        if (password.length < 6) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Password must be at least 6 characters long.";
+            return;
+        }
+
+        try {
+            msgBox.style.color = "var(--text-secondary)";
+            msgBox.innerText = "Creating account...";
+            
+            // Create user with Firebase Auth (compat SDK v10.8.0)
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Send verification email
+            await user.sendEmailVerification();
+            
+            msgBox.style.color = "var(--accent-success)";
+            msgBox.innerText = "Account created! Verification email sent. Please check your inbox.";
+            
+            // Switch to verification view
+            showAuthView('verify');
+        } catch (err) {
+            msgBox.style.color = "var(--accent-danger)";
+            msgBox.innerText = "Registration error: " + err.message;
+        }
+    }
+
     async function handlePasswordReset() {
         const email = document.getElementById("reset-email").value.trim();
         const msgBox = document.getElementById("auth-status-msg");
