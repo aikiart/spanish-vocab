@@ -402,14 +402,14 @@
             </div>
         </div>
 
-        <!-- EMAIL VERIFICATION VIEW -->
+<!-- EMAIL VERIFICATION VIEW -->
         <div id="verify-view" style="display: none;">
             <h2>✉️ Verify Your Email</h2>
             <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">
                 A verification link has been sent to your email address. Please open the link to activate your studio access.
             </p>
             <div class="upload-controls">
-                <button type="button" class="action-btn" onclick="auth.currentUser.reload().then(() => auth.onAuthStateChanged(auth.currentUser))">
+                <button type="button" class="action-btn" onclick="auth.currentUser.reload().then(() => location.reload())">
                     I Have Verified My Email ↻
                 </button>
                 <button type="button" class="action-btn sm-btn" style="background-color: var(--input-bg); border: 1px solid var(--input-border);" onclick="handleResendVerification()">
