@@ -726,7 +726,7 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-// LEGACY WORKSPACE MIGRATION: COPIES NAMED DOCUMENTS (e.g. 'ana') TO UID DOCUMENTS IF EMPTY
+// LEGACY WORKSPACE MIGRATION: CHECKS MULTIPLE POSSIBLE LEGACY NAMES
     async function migrateLegacyWorkspaceIfNeeded(user) {
         try {
             const userRef = db.collection("workspaces").doc(user.uid);
@@ -738,25 +738,33 @@
             }
 
             const emailPrefix = user.email ? user.email.split('@')[0].toLowerCase().trim() : '';
-
-            if (emailPrefix) {
-                const legacyRef = db.collection("workspaces").doc(emailPrefix);
+            // Check your email prefix, plus common legacy names like 'ana' or 'default'
+            const legacyNamesToTry = [emailPrefix, 'ana', 'default', 'studio'];
+            
+            let foundData = null;
+            for (let legacyName of legacyNamesToTry) {
+                if (!legacyName) continue;
+                const legacyRef = db.collection("workspaces").doc(legacyName);
                 const legacySnap = await legacyRef.get();
-
-                if (legacySnap.exists) {
-                    const legacyData = legacySnap.data();
-                    await userRef.set({
-                        ...legacyData,
-                        migratedFrom: emailPrefix,
-                        migratedAt: new Date()
-                    }, { merge: true });
+                if (legacySnap.exists && legacySnap.data().allLists) {
+                    foundData = legacySnap.data();
+                    console.log(`Found legacy workspace under: "${legacyName}"`);
+                    break;
                 }
+            }
+
+            if (foundData) {
+                await userRef.set({
+                    ...foundData,
+                    migratedAt: new Date()
+                }, { merge: true });
+                console.log("Legacy workspace successfully migrated to UID!");
             }
         } catch (err) {
             console.warn("Legacy migration check skipped:", err.message);
         }
-    }    
-
+    }
+    
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
         const signupView = document.getElementById("signup-view");
