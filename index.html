@@ -735,54 +735,23 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
- // BULLETPROOF SESSION INITIALIZER (UID-BASED ISOLATION)
+// STRICT ISOLATED SESSION INITIALIZER (NO LEGACY BLEED)
     async function initUserSession(workspaceId) {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         
         try {
-            // workspaceId is strictly the Firebase Auth UID
+            // Strictly query ONLY the logged-in user's unique Firebase UID document
             const docRef = db.collection("workspaces").doc(workspaceId);
             const docSnap = await docRef.get();
 
             let data = null;
             if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
                 data = docSnap.data();
-                console.log("☁️ Successfully loaded workspace from secure UID document.");
+                console.log("☁️ Successfully loaded secure workspace for UID.");
             } else {
-                // If it's a brand new user, check for any old legacy workspace to migrate once
-                const emailPrefix = auth.currentUser && auth.currentUser.email ? auth.currentUser.email.split('@')[0].toLowerCase().trim() : '';
-                const candidateNames = [emailPrefix, 'art', 'aikiart', 'aikiart7', 'ana', 'default', 'studio'];
-                
-                let largestCount = 0;
-                let bestData = null;
-                let bestSource = "";
-
-                for (let name of candidateNames) {
-                    if (!name) continue;
-                    try {
-                        const legacySnap = await db.collection("workspaces").doc(name).get();
-                        if (legacySnap.exists && legacySnap.data().allLists) {
-                            const listKeys = Object.keys(legacySnap.data().allLists);
-                            if (listKeys.length > largestCount) {
-                                largestCount = listKeys.length;
-                                bestData = legacySnap.data();
-                                bestSource = name;
-                            }
-                        }
-                    } catch (e) {
-                        // Suppress permission errors
-                    }
-                }
-
-                if (bestData && largestCount > 0 && workspaceId === auth.currentUser.uid) {
-                    data = bestData;
-                    console.log(`☁️ Successfully migrated ${largestCount} lists from legacy workspace "${bestSource}"!`);
-                    await docRef.set({
-                        ...data,
-                        migratedFrom: bestSource,
-                        migratedAt: new Date()
-                    }, { merge: true });
-                }
+                console.log("🛠️ No existing cloud workspace for this user. Initializing fresh default state.");
+                await setupDefaultData();
+                return;
             }
 
             if (data && data.allLists && Object.keys(data.allLists).length > 0) {
@@ -821,7 +790,6 @@
                     nextQuestion();
                 }, 100);
             } else {
-                console.warn("⚠️ No cloud data resolved. Executing guaranteed local fallback.");
                 await setupDefaultData();
             }
         } catch (err) {
@@ -830,29 +798,6 @@
             await setupDefaultData();
         }
     }
-
-    function showAuthView(viewName) {
-        const signinView = document.getElementById("signin-view");
-        const signupView = document.getElementById("signup-view");
-        const verifyView = document.getElementById("verify-view");
-        const forgotView = document.getElementById("forgot-view");
-
-        if (signinView) signinView.style.display = "none";
-        if (signupView) signupView.style.display = "none";
-        if (verifyView) verifyView.style.display = "none";
-        if (forgotView) forgotView.style.display = "none";
-
-        if (viewName === 'signin' && signinView) {
-            signinView.style.display = "block";
-        } else if (viewName === 'signup' && signupView) {
-            signupView.style.display = "block";
-        } else if (viewName === 'verify' && verifyView) {
-            verifyView.style.display = "block";
-        } else if (viewName === 'forgot' && forgotView) {
-            forgotView.style.display = "block";
-        }
-    }
-
     // AUTH STATE MONITOR
     auth.onAuthStateChanged(async (user) => {
         const authContainer = document.getElementById("auth-container");
