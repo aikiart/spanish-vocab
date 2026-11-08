@@ -359,6 +359,17 @@
 
         #next-btn, #tense-next-btn { display: none; margin: 20px auto 0 auto; }
         .completion-box { display: none; margin: 20px 0; }
+
+        /* Force high contrast and visibility on dropdown options */
+        select option {
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            padding: 10px;
+        }
+
+        .list-selector-bar select {
+            color-scheme: dark;
+        }
     </style>
 </head>
 <body>
