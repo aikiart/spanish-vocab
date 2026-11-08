@@ -707,29 +707,34 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-    // LEGACY WORKSPACE MIGRATION: COPIES NAMED DOCUMENTS (e.g. 'ana', 'vero') TO UID DOCUMENTS
+// LEGACY WORKSPACE MIGRATION: COPIES NAMED DOCUMENTS (e.g. 'ana', 'vero') TO UID DOCUMENTS
     async function migrateLegacyWorkspaceIfNeeded(user) {
-        const userRef = db.collection("workspaces").doc(user.uid);
-        const userSnap = await userRef.get();
+        try {
+            const userRef = db.collection("workspaces").doc(user.uid);
+            const userSnap = await userRef.get();
 
-        if (userSnap.exists) return;
+            if (userSnap.exists) return;
 
-        const emailPrefix = user.email ? user.email.split('@')[0].toLowerCase().trim() : '';
+            const emailPrefix = user.email ? user.email.split('@')[0].toLowerCase().trim() : '';
 
-        if (emailPrefix) {
-            const legacyRef = db.collection("workspaces").doc(emailPrefix);
-            const legacySnap = await legacyRef.get();
+            if (emailPrefix) {
+                const legacyRef = db.collection("workspaces").doc(emailPrefix);
+                const legacySnap = await legacyRef.get();
 
-            if (legacySnap.exists) {
-                const legacyData = legacySnap.data();
-                await userRef.set({
-                    ...legacyData,
-                    migratedFrom: emailPrefix,
-                    migratedAt: new Date()
-                }, { merge: true });
+                if (legacySnap.exists) {
+                    const legacyData = legacySnap.data();
+                    await userRef.set({
+                        ...legacyData,
+                        migratedFrom: emailPrefix,
+                        migratedAt: new Date()
+                    }, { merge: true });
+                }
             }
+        } catch (err) {
+            console.warn("Legacy migration skipped (restricted by security rules or unavailable):", err.message);
         }
     }
+
 
 function showAuthView(viewName) {
         const signinView = document.getElementById("signin-view");
