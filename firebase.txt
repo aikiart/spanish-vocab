@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Restrict access strictly to the workspaces collection
+    match /workspaces/{workspaceId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['allLists', 'lastUpdated']);
+      allow delete: if false; // Prevent full deletion of workspace documents
+    }
+    
+    // Explicitly block all other collections in your database
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

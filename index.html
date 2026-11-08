@@ -731,94 +731,52 @@
         }
     }
 
-    // AUTH STATE MONITOR (ENFORCES EMAIL VERIFICATION & LOADS DATA)
-    auth.onAuthStateChanged(async (user) => {
-        const authContainer = document.getElementById("auth-container");
-        const appDashboard = document.getElementById("app-dashboard");
+// AUTH STATE MONITOR (ENFORCES EMAIL VERIFICATION & LOADS DATA)
+   auth.onAuthStateChanged(async (user) => {
+       const authContainer = document.getElementById("auth-container");
+       const appDashboard = document.getElementById("app-dashboard");
 
-        if (user && !user.isAnonymous) {
-            await user.reload();
+       if (user && !user.isAnonymous) {
+           try {
+               await user.reload();
+           } catch (error) {
+               console.error("Error reloading user state:", error);
+               // Gracefully fallback to sign-in view if reload fails
+               currentUserUid = null;
+               authContainer.style.display = "block";
+               appDashboard.style.display = "none";
+               showAuthView('signin');
+               return;
+           }
 
-            if (!user.emailVerified) {
-                authContainer.style.display = "block";
-                appDashboard.style.display = "none";
-                showAuthView('verify');
-                return;
-            }
+           if (!user.emailVerified) {
+               authContainer.style.display = "block";
+               appDashboard.style.display = "none";
+               showAuthView('verify');
+               return;
+           }
 
-            await migrateLegacyWorkspaceIfNeeded(user);
+           try {
+               await migrateLegacyWorkspaceIfNeeded(user);
+           } catch (migrationError) {
+               console.error("Legacy workspace migration failed:", migrationError);
+               // Proceed anyway so the app doesn't lock the user out if migration hiccups
+           }
 
-            currentUserUid = user.uid;
-            document.getElementById('user-display').innerText = `Workspace: ${user.email}`;
-            
-            authContainer.style.display = "none";
-            appDashboard.style.display = "block";
-            
-            initUserSession(user.uid);
-        } else {
-            currentUserUid = null;
-            authContainer.style.display = "block";
-            appDashboard.style.display = "none";
-            showAuthView('signin');
-        }
-    });
-
-    function showAuthView(viewName) {
-        document.getElementById("signin-view").style.display = viewName === 'signin' ? 'block' : 'none';
-        document.getElementById("signup-view").style.display = viewName === 'signup' ? 'block' : 'none';
-        document.getElementById("verify-view").style.display = viewName === 'verify' ? 'block' : 'none';
-        document.getElementById("forgot-view").style.display = viewName === 'forgot' ? 'block' : 'none';
-        document.getElementById("auth-status-msg").innerText = "";
-    }
-
-    // AUTHENTICATION FUNCTIONS
-    async function handleSignIn() {
-        const email = document.getElementById("login-email").value.trim();
-        const password = document.getElementById("login-password").value.trim();
-        const msgBox = document.getElementById("auth-status-msg");
-
-        if (!email || !password) {
-            msgBox.style.color = "var(--accent-danger)";
-            msgBox.innerText = "Please enter both email and password.";
-            return;
-        }
-
-        try {
-            msgBox.style.color = "var(--text-secondary)";
-            msgBox.innerText = "Signing in...";
-            await auth.signInWithEmailAndPassword(email, password);
-        } catch (err) {
-            msgBox.style.color = "var(--accent-danger)";
-            msgBox.innerText = "Login failed: " + err.message;
-        }
-    }
-
-    async function handleSignUp() {
-        const email = document.getElementById("signup-email").value.trim();
-        const password = document.getElementById("signup-password").value.trim();
-        const msgBox = document.getElementById("auth-status-msg");
-
-        if (!email || !password || password.length < 6) {
-            msgBox.style.color = "var(--accent-danger)";
-            msgBox.innerText = "Enter a valid email and minimum 6-character password.";
-            return;
-        }
-
-        try {
-            msgBox.style.color = "var(--text-secondary)";
-            msgBox.innerText = "Creating account & sending verification email...";
-            const cred = await auth.createUserWithEmailAndPassword(email, password);
-            await cred.user.sendEmailVerification();
-            
-            msgBox.style.color = "var(--accent-success)";
-            msgBox.innerText = "Account created! Please verify your email link to log in.";
-            showAuthView('verify');
-        } catch (err) {
-            msgBox.style.color = "var(--accent-danger)";
-            msgBox.innerText = "Registration failed: " + err.message;
-        }
-    }
-
+           currentUserUid = user.uid;
+           document.getElementById('user-display').innerText = `Workspace: ${user.email}`;
+           
+           authContainer.style.display = "none";
+           appDashboard.style.display = "block";
+           
+           initUserSession(user.uid);
+       } else {
+           currentUserUid = null;
+           authContainer.style.display = "block";
+           appDashboard.style.display = "none";
+           showAuthView('signin');
+       }
+   });
     async function handleResendVerification() {
         const user = auth.currentUser;
         const msgBox = document.getElementById("auth-status-msg");
