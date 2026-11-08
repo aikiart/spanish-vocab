@@ -735,21 +735,21 @@
     let sentenceCorrectCount = 0;
     let sentenceIncorrectCount = 0;
 
-    // BULLETPROOF SESSION INITIALIZER WITH AUTOMATED MULTI-WORKSPACE MIGRATION
+ // BULLETPROOF SESSION INITIALIZER (UID-BASED ISOLATION)
     async function initUserSession(workspaceId) {
         document.getElementById("sync-msg").innerText = "☁️ Syncing with Cloud...";
         
         try {
+            // workspaceId is strictly the Firebase Auth UID
             const docRef = db.collection("workspaces").doc(workspaceId);
             const docSnap = await docRef.get();
 
             let data = null;
-            // Check if UID document already has rich lists
-            if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 2) {
+            if (docSnap.exists && docSnap.data().allLists && Object.keys(docSnap.data().allLists).length > 0) {
                 data = docSnap.data();
                 console.log("☁️ Successfully loaded workspace from secure UID document.");
             } else {
-                // Scan all potential legacy workspaces to find the one with the most lists (e.g. 40+ lists)
+                // If it's a brand new user, check for any old legacy workspace to migrate once
                 const emailPrefix = auth.currentUser && auth.currentUser.email ? auth.currentUser.email.split('@')[0].toLowerCase().trim() : '';
                 const candidateNames = [emailPrefix, 'art', 'aikiart', 'aikiart7', 'ana', 'default', 'studio'];
                 
@@ -763,7 +763,6 @@
                         const legacySnap = await db.collection("workspaces").doc(name).get();
                         if (legacySnap.exists && legacySnap.data().allLists) {
                             const listKeys = Object.keys(legacySnap.data().allLists);
-                            console.log(`📂 Checked legacy workspace "${name}": ${listKeys.length} lists found.`);
                             if (listKeys.length > largestCount) {
                                 largestCount = listKeys.length;
                                 bestData = legacySnap.data();
@@ -775,17 +774,14 @@
                     }
                 }
 
-                if (bestData && largestCount > 0) {
+                if (bestData && largestCount > 0 && workspaceId === auth.currentUser.uid) {
                     data = bestData;
                     console.log(`☁️ Successfully migrated ${largestCount} lists from legacy workspace "${bestSource}"!`);
-                    // Save permanently to UID document so future loads are direct
                     await docRef.set({
                         ...data,
                         migratedFrom: bestSource,
                         migratedAt: new Date()
                     }, { merge: true });
-                } else if (docSnap.exists) {
-                    data = docSnap.data();
                 }
             }
 
@@ -816,7 +812,6 @@
 
                 document.getElementById("sync-msg").innerText = "☁️ Cloud Synced";
 
-                // Ensure DOM layout is fully painted before rendering UI components
                 setTimeout(() => {
                     renderListDropdown();
                     renderVerbListDropdown();
