@@ -798,6 +798,18 @@
             await setupDefaultData();
         }
     }
+
+
+    function showAuthView(view) {
+        const views = ['signin', 'signup', 'verify', 'forgot'];
+        views.forEach(v => {
+            const el = document.getElementById(`${v}-view`);
+            if (el) el.style.display = (v === view) ? 'block' : 'none';
+        });
+        const msgBox = document.getElementById("auth-status-msg");
+        if (msgBox) msgBox.innerText = "";
+    }
+    
     // AUTH STATE MONITOR
     auth.onAuthStateChanged(async (user) => {
         const authContainer = document.getElementById("auth-container");
